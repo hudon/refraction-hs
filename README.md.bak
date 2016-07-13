@@ -1,0 +1,55 @@
+# Refraction
+
+The goal of this project is to have a privacy tool running alongside a bitcoin wallet. It's meant to be a simple CLI to mix your bitcoin in a decentralized way using the Xim protocol.
+
+```
+> refraction send --amount <number> --unit <btc|satoshi> --destination <address>
+Are you sure you want to send <number> <unit> anonymously to <destination>? The estimated fee will
+be <estimated fee>. The estimated wait times are:
+broadcasted: <estimate>
+3 conf: <estimate>
+yes/no?
+yes
+Sending... (you may quit at any time, sending will proceed as long as server is runnning)
+Bitcoin sent! (view logs at /var/log/refraction/timestamp)
+
+> refraction receive --amount <number> --unit <btc|satoshi> --destination <address>
+Checking address ownership.
+You own the private key to <address>.
+Generating bitcoin request... Please
+<bitcoin request> (maybe QR code link)
+Receiving...
+Forwarding to <anonymous recipient address>
+```
+
+and a config file with stuff like the I2P or Tor preferences, the Bitcoin wallet location. It
+would ask for decryption passwords as needed. The config would also set an expiry on the logs
+(default 7 days?).
+
+The "receive" feature would be a wrapper around "send" basically. Refraction would provide a
+bitcoin payment request and when payment is detected, a "refraction send" would be initiated to a
+final recipient address (that you control).
+
+
+The 2 most important principles for this implementation are:
+1- Correctness. Everything is to be properly tested and documented.
+2- Decentralization. The goal of refraction is to be a completely censorship and sybil attack
+resistant bitcoin privacy tool.
+
+This is an implementation of the Xim and FairExchange protocols.
+
+
+## Roadmap
+
+Top-down approach for now
+
+- refraction
+  - send
+    - choose funds to send
+      - build a sending tool (non-anonymous, regular tx)
+        - find electrum wallet
+    - xim + exchange
+      - xim
+        - implement xim with tor or i2p
+        - after matching, send normally
+      - fairexchange
