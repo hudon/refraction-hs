@@ -8,7 +8,7 @@ The goal is to fully implement the Xim protocol explained in [0] which depends o
 There is a JavaScript prototype implementation linked in the references below. [2]
 
 
-## Usage
+## User Guide
 
 ```
 > refraction
@@ -24,6 +24,19 @@ info: FairExchange()
 info: done! Mixed Z BTC now deposited in address:
 >
 ```
+
+## Developer Guide
+
+### Building
+
+### Testing
+
+### Releasing
+
+### Resources
+
+- Haskell: https://haskell-lang.org/get-started
+- Bitcoin Wiki: https://en.bitcoin.it/wiki/Main_Page
 
 
 ## References

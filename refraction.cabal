@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            Decentralized Bitcoin privacy tool
 description:         Please see README.md
 homepage:            http://github.com/hudon/refraction-hs#readme
-license:             BSD3
+license:             GPLv3
 license-file:        LICENSE
 author:              James Hudon
 maintainer:          jameshudon@gmail.com
