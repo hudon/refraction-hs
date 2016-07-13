@@ -1,2 +1,35 @@
-# refraction-hs
-Haskell implementation of refraction
+# Refraction
+## Decentralized Bitcoin Mixing Service
+
+Refraction is sybil-resistant mixing for Bitcoin.
+
+The goal is to fully implement the Xim protocol explained in [0] which depends on the FairExchange protocol [1].
+
+There is a JavaScript prototype implementation linked in the references below. [2]
+
+
+## Usage
+
+```
+> refraction
+source private key:
+destination address:
+info: source private key valid
+info: destination address valid
+info: mixing X BTC with Xim delta=Y
+info: starting Xim(delta)
+info: starting Discover()
+info: Advertising with|Responding to onion address:
+info: FairExchange()
+info: done! Mixed Z BTC now deposited in address:
+>
+
+
+## References
+
+
+[0] http://forensics.umass.edu/pubs/bissias.wpes.2014.pdf
+
+[1] http://elaineshi.com/docs/bitcoin.pdf
+
+[2] https://github.com/hudon/refraction
