@@ -29,7 +29,15 @@ info: done! Mixed Z BTC now deposited in address:
 
 ### Building
 
+    > stack build
+
 ### Testing
+
+    > stack test
+
+### Running
+
+    > stack exec refraction-exe
 
 ### Releasing
 
