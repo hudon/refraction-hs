@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Lib
 import System.IO
+import qualified Refraction as R
 
 
 main :: IO ()
@@ -13,6 +13,4 @@ main = do
     putStr "Enter destination address: "
     hFlush stdout
     pubkey <- getLine
-    putStr "Your prvkey: "
-    hFlush stdout
-    putStrLn prvkey
+    R.refract prvkey pubkey
