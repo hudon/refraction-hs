@@ -1,3 +1,0 @@
-electrum:
-  path: '~/.electrum'
-  wallet: 'default_wallet'
