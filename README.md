@@ -12,8 +12,8 @@ There is a JavaScript prototype implementation linked in the references below. [
 
 ```
 > refraction
-source private key:
-destination address:
+Enter source private key:
+Enter destination address:
 info: source private key valid
 info: destination address valid
 info: mixing X BTC with Xim delta=Y
@@ -33,6 +33,7 @@ info: done! Mixed Z BTC now deposited in address:
 
 ### Testing
 
+    > hlint .
     > stack test
 
 ### Running

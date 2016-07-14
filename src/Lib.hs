@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lib
-    ( someFunc
+    ( isValidPrivateKey
     ) where
 
-import qualified Data.Text.IO as T
-
-someFunc :: IO ()
-someFunc = T.putStrLn "someFunc"
+isValidPrivateKey :: String -> Bool
+isValidPrivateKey x = True
