@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Refraction
     ( isValidPrivateKey
+    , isValidAddress
     , refract
     ) where
 
