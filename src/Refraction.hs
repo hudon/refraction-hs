@@ -4,19 +4,28 @@ module Refraction
     , refract
     ) where
 
-isValidPrivateKey :: String -> Bool
-isValidPrivateKey prv = True
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import qualified Network.Haskoin.Crypto as C
 
-handleBadPrvkey :: String -> IO ()
+isValidPrivateKey :: T.Text -> Bool
+isValidPrivateKey prv =
+    case C.fromWif (TE.encodeUtf8 prv) of
+        Nothing -> False
+        Just _ -> True
+
+handleBadPrvkey :: T.Text -> IO ()
 handleBadPrvkey prv = putStrLn "ERROR: private key is not valid"
 
-isValidAddress :: String -> Bool
-isValidAddress addr = True
+isValidAddress :: T.Text -> Bool
+isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
+    Nothing -> False
+    Just _ -> True
 
-handleBadAddress :: String -> IO()
+handleBadAddress :: T.Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-refract :: String -> String -> IO ()
+refract :: T.Text -> T.Text -> IO ()
 refract prv addr = do
     putStrLn "INFO: Starting refraction"
     if not (isValidPrivateKey prv) then handleBadPrvkey prv else do
