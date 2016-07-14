@@ -23,4 +23,10 @@ unitTests = testGroup "Unit tests"
 
   , testCase "Valid Private Key" $
       R.isValidPrivateKey "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ" @?= True
+
+  , testCase "Invalid Address" $
+      R.isValidAddress "foo" @?= False
+
+  , testCase "Valid Address" $
+      R.isValidAddress "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2" @?= True
   ]

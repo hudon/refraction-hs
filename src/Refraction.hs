@@ -29,6 +29,7 @@ handleBadAddress addr = putStrLn "ERROR: address is not valid"
 refract :: T.Text -> T.Text -> IO ()
 refract prv addr = do
     putStrLn "INFO: Starting refraction"
-    if not (isValidPrivateKey prv) then handleBadPrvkey prv else do
-        if not (isValidAddress addr) then handleBadAddress addr else do
-            return ()
+    case () of
+      _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
+        | not (isValidAddress addr) -> handleBadAddress addr
+        | otherwise -> return ()
