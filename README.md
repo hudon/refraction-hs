@@ -42,7 +42,7 @@ info: done! Mixed Z BTC now deposited in address:
 
 ### Releasing
 
-### Resources
+### Developer Resources
 
 - Haskell: https://haskell-lang.org/get-started
 - Bitcoin Wiki: https://en.bitcoin.it/wiki/Main_Page
