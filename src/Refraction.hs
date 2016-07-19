@@ -28,8 +28,8 @@ handleBadAddress :: T.Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
 refract :: T.Text -> T.Text -> T.Text -> IO ()
-refract n prv addr = do
-    TI.putStrLn $ T.append "INFO: Starting refraction on " n
+refract network prv addr = do
+    TI.putStrLn $ T.append "INFO: Starting refraction on " network
     case () of
       _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (isValidAddress addr) -> handleBadAddress addr
