@@ -6,6 +6,7 @@ module Refraction
     ) where
 
 import qualified Data.Text as T
+import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
 import qualified Network.Haskoin.Crypto as C
 
@@ -26,9 +27,9 @@ isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
 handleBadAddress :: T.Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-refract :: T.Text -> T.Text -> IO ()
-refract prv addr = do
-    putStrLn "INFO: Starting refraction"
+refract :: T.Text -> T.Text -> T.Text -> IO ()
+refract n prv addr = do
+    TI.putStrLn $ T.append "INFO: Starting refraction on " n
     case () of
       _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (isValidAddress addr) -> handleBadAddress addr
