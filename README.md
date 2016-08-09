@@ -53,6 +53,6 @@ info: done! Mixed Z BTC now deposited in address:
 
 [0] http://forensics.umass.edu/pubs/bissias.wpes.2014.pdf
 
-[1] http://elaineshi.com/docs/bitcoin.pdf
+[1] http://elaineshi.com/docs/bitcoin.pdf (section 7 is the relevant part -- FairExchange)
 
 [2] https://github.com/hudon/refraction
