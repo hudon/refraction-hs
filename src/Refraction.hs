@@ -5,6 +5,7 @@ module Refraction
     , refract
     ) where
 
+import qualified PeerToPeer as P2P
 import qualified Data.Text as T
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
@@ -27,10 +28,11 @@ isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
 handleBadAddress :: T.Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-refract :: T.Text -> T.Text -> T.Text -> IO ()
-refract network prv addr = do
+refract :: T.Text -> Bool -> Bool -> T.Text -> T.Text -> IO ()
+refract network isBob ignoreValidation prv addr = do
     TI.putStrLn $ T.append "INFO: Starting refraction on " network
     case () of
-      _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
-        | not (isValidAddress addr) -> handleBadAddress addr
-        | otherwise -> return ()
+      _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
+        | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
+        | isBob -> P2P.startServer
+        | otherwise -> P2P.startClient

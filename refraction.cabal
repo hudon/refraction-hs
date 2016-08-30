@@ -16,9 +16,11 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Refraction
+                     , PeerToPeer
   build-depends:       base >= 4.7 && < 5
                      , text
                      , haskoin-core
+                     , network
   default-language:    Haskell2010
 
 executable refraction-exe
