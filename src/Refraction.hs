@@ -28,11 +28,11 @@ isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
 handleBadAddress :: T.Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-refract :: T.Text -> Bool -> T.Text -> T.Text -> IO ()
-refract network isBob prv addr = do
+refract :: T.Text -> Bool -> Bool -> T.Text -> T.Text -> IO ()
+refract network isBob ignoreValidation prv addr = do
     TI.putStrLn $ T.append "INFO: Starting refraction on " network
     case () of
-      _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
-        | not (isValidAddress addr) -> handleBadAddress addr
+      _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
+        | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
         | isBob -> P2P.startServer
         | otherwise -> P2P.startClient
