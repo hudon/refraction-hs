@@ -51,8 +51,8 @@ info: done! Mixed Z BTC now deposited in address:
 ## References
 
 
-[0] http://forensics.umass.edu/pubs/bissias.wpes.2014.pdf
+[0] http://forensics.umass.edu/pubs/bissias.wpes.2014.pdf (xim)
 
-[1] http://elaineshi.com/docs/bitcoin.pdf
+[1] http://elaineshi.com/docs/bitcoin.pdf (section 7 is the relevant part -- FairExchange)
 
-[2] https://github.com/hudon/refraction
+[2] https://github.com/hudon/refraction (javascript prototype, currently does FairExchange over Tor but no Xim Discover())

@@ -2,6 +2,7 @@
 module Main where
 
 import System.Console.GetOpt
+import System.Directory (doesFileExist)
 import System.Environment
 import System.IO
 import Control.Applicative
@@ -11,8 +12,9 @@ import Data.Text (Text)
 import qualified Data.Text.IO as T
 import qualified Refraction as R
 
+configFilename = ".refraction.yaml"
 
--- Specify config file format
+-- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
 
 data BitcoinConfig = BitcoinConfig { network :: Text } deriving Show
@@ -26,7 +28,7 @@ instance FromJSON BitcoinConfig where
     parseJSON x = fail ("not an object: " ++ show x)
 
 readConfig :: IO RefractionConfig
-readConfig = either (error . show) id <$> decodeFileEither ".refraction.yaml"
+readConfig = either (error . show) id <$> decodeFileEither configFilename
 
 
 -- Specify options
@@ -57,8 +59,14 @@ readOptions = do
   return (isBob, ignoreValidation)
 
 
+touchConfig :: IO ()
+touchConfig = doesFileExist configFilename >>= writeIfFalse
+  where writeIfFalse False = writeFile configFilename "bitcoin:\n  network: testnet3"
+        writeIfFalse _ = return ()
+
 runRefraction :: Bool -> Bool -> IO ()
 runRefraction isBob ignoreValidation = do
+    touchConfig
     config <- readConfig
     T.putStr "Enter source private key (WIF encoded): "
     hFlush stdout
