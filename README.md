@@ -50,6 +50,15 @@ info: done! Mixed Z BTC now deposited in address:
 - Bitcoin Wiki: https://en.bitcoin.it/wiki/Main_Page
 
 
+### Roadmap
+
+1. Create FairExchange MVP over TCP
+2. Move to onion routing
+3. Implement discovery MVP
+4. Reduce dependence on centralized third parties
+5. Alpha release
+
+
 ## References
 
 
