@@ -39,8 +39,8 @@ info: done! Mixed Z BTC now deposited in address:
 ### Running
 
     > stack exec refraction-exe
-    > stack exec refraction-exe -b  # run as bob (fairexchange server)
-    > stack-exec refraction-exe -i  # ignore input key/address validation
+    > stack exec refraction-exe -- -b  # run as bob (fairexchange server)
+    > stack-exec refraction-exe -- -i  # ignore input key/address validation
 
 ### Releasing
 
