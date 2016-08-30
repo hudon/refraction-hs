@@ -27,6 +27,7 @@ readConfig =
 
 main :: IO ()
 main = do
+    let isBob = True
     config <- readConfig
     T.putStr "Enter source private key (WIF encoded): "
     hFlush stdout
@@ -34,4 +35,4 @@ main = do
     putStr "Enter destination address (Base58 encoded): "
     hFlush stdout
     pubkey <- T.getLine
-    R.refract (network (bitcoin config)) prvkey pubkey
+    R.refract (network (bitcoin config)) isBob prvkey pubkey
