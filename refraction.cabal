@@ -15,13 +15,20 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Refraction
+  exposed-modules:     Blockchain
+                     , Refraction
                      , PeerToPeer
-  build-depends:       base >= 4.7 && < 5
-                     , text
+  build-depends:       aeson
+                     , base >= 4.7 && < 5
+                     , bytestring
+                     , cereal
+                     , either-unwrap
                      , haskoin-core
+                     , lens
                      , network
+                     , text
                      , yaml
+                     , wreq
   default-language:    Haskell2010
 
 executable refraction-exe
