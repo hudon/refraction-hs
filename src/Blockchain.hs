@@ -33,7 +33,6 @@ instance FromJSON ResponseTransaction
 transaction :: TxHash -> IO Tx
 transaction txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
-    putStrLn url
     r <- asJSON =<< get url
     let tx = decode . fromJust . decodeHex . encodeUtf8 . rawtx $ r ^. responseBody
     return $ fromRight tx -- YOLO
