@@ -16,8 +16,10 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Blockchain
-                     , Refraction
+                     , Discover
+                     , Generator
                      , PeerToPeer
+                     , Refraction
   build-depends:       aeson
                      , base >= 4.7 && < 5
                      , bytestring
