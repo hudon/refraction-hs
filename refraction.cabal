@@ -24,10 +24,10 @@ library
                      , base >= 4.7 && < 5
                      , bytestring
                      , cereal
-                     , either-unwrap
                      , haskoin-core
                      , lens
                      , network
+                     , random
                      , text
                      , yaml
                      , wreq

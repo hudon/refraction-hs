@@ -4,25 +4,33 @@ module Discover
     ) where
 
 import Data.ByteString (ByteString)
-import Network.Haskoin.Crypto (Address, PrvKey)
-import Network.Haskoin.Transaction (Coin, coinValue, OutPoint, outValue, Tx, TxOut)
-
+import qualified Data.ByteString.Char8 as B8
+import Generator (makeOPRETURNTransaction, SatoshiValue)
+import Network.Haskoin.Transaction (Tx)
+import System.Random (getStdRandom, randomR)
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
 -- Advertise fee
-tao = 10000
+tao = 10000 :: SatoshiValue
 
 type Location = ByteString
 
 postAd :: IO Tx
 postAd = undefined
 
+runRespondent :: IO Location
+runRespondent = undefined
+
+runAdvertiser :: IO Location
+runAdvertiser = do
+    let tx = either undefined id $ makeOPRETURNTransaction undefined undefined :: Tx
+    return $ B8.pack "example.onion"
+
+flipCoin :: IO Bool
+flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
+
 discover :: IO Location
-discover = undefined
--- if rand(0.5) > 0.5 then
---   assume role of Advertiser with address A and location alphaA
--- else
---   assume role of Respondent R with address R and location alphaR
+discover = flipCoin >>= \heads -> if heads then runAdvertiser else runRespondent
 -- Advertiser: publish T{A -> A, tip = tao/2, TEXT(loc=alphaA, nonce=nA, pool=P}
 -- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
 -- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
