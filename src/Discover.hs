@@ -1,31 +1,62 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-|
+  Discovery is the first step of Xim and allows peers to find eachother. This step
+  adds Sybil attack resistance to the mixing
+-}
 module Discover
-    ( postAd
+    ( discover
     ) where
 
 import Data.ByteString (ByteString)
-import Network.Haskoin.Crypto (Address, PrvKey)
-import Network.Haskoin.Transaction (Coin, coinValue, OutPoint, outValue, Tx, TxOut)
-
+import qualified Data.ByteString.Char8 as B8
+import Generator (makeOPRETURNTransaction, SatoshiValue)
+import Network.Haskoin.Transaction (Tx)
+import System.Random (getStdRandom, randomR)
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
 -- Advertise fee
-tao = 10000
+tao = 10000 :: SatoshiValue
 
 type Location = ByteString
 
-postAd :: IO Tx
-postAd = undefined
-
+-- |Finds a mixing peer and returns its location to begin communication for fair exchange
 discover :: IO Location
-discover = undefined
--- if rand(0.5) > 0.5 then
---   assume role of Advertiser with address A and location alphaA
--- else
---   assume role of Respondent R with address R and location alphaR
--- Advertiser: publish T{A -> A, tip = tao/2, TEXT(loc=alphaA, nonce=nA, pool=P}
--- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
--- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
+discover = flipCoin >>= \heads -> if heads then runAdvertiser else runRespondent
+  where
+    flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
+
+selectAdvertiser :: IO ()
+selectAdvertiser = undefined
+
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
+publishPairRequest :: IO ()
+publishPairRequest = undefined
+
+-- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
+runRespondent :: IO Location
+runRespondent = do
+    selectAdvertiser
+    publishPairRequest
+    return $ B8.pack "advertiser-location.onion"
+
+-- Advertiser: publish T{A -> A, tip = tao/2, TEXT(loc=alphaA, nonce=nA, pool=P}
+publishAd :: IO ()
+publishAd = do
+    let tx = either undefined id $ makeOPRETURNTransaction undefined undefined :: Tx
+    undefined
+
+-- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
+selectRespondent :: IO ()
+selectRespondent = undefined
+
 -- Advertiser: publishes T{A -> A, tip = tao/2, TEXT(lock = h(nR), nA)}
--- return aA to R, aR to A
+publishPairResponse :: IO ()
+publishPairResponse = undefined
+
+runAdvertiser :: IO Location
+runAdvertiser = do
+    publishAd
+    selectRespondent
+    publishPairResponse
+    return $ B8.pack "respondent-location.onion"
+

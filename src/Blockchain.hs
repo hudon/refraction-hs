@@ -8,8 +8,7 @@ import Control.Lens
 import Data.Aeson (FromJSON)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import Data.Either.Unwrap (fromLeft, fromRight)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromMaybe)
 import Data.Serialize (decode)
 import Data.Text (Text)
 import Data.Text.Encoding (encodeUtf8)
@@ -34,8 +33,8 @@ transaction :: TxHash -> IO Tx
 transaction txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
     r <- asJSON =<< get url
-    let tx = decode . fromJust . decodeHex . encodeUtf8 . rawtx $ r ^. responseBody
-    return $ fromRight tx -- YOLO
+    let tx = decode . fromMaybe undefined . decodeHex . encodeUtf8 . rawtx $ r ^. responseBody
+    return $ either undefined id tx -- YOLO
 
 data ResponseUTXO = ResponseUTXO {
       txid :: Text
@@ -52,4 +51,4 @@ utxos addr = do
     sequence $ map fetchUTXO utxos
   where
     fetchUTXO utxo = getTx utxo >>= (\tx -> return (tx, vout utxo))
-    getTx = transaction . fromJust . hexToTxHash . encodeUtf8 . txid
+    getTx = transaction . fromMaybe undefined . hexToTxHash . encodeUtf8 . txid
