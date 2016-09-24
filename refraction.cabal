@@ -21,15 +21,20 @@ library
                      , Generator
                      , PeerToPeer
                      , Refraction
+                     , Tor
   build-depends:       aeson
                      , base >= 4.7 && < 5
+                     , base32string
                      , bytestring
                      , cereal
                      , haskoin-core
                      , http-client
                      , lens
                      , network
+                     , network-anonymous-tor
+                     , network-simple
                      , random
+                     , splice
                      , text
                      , yaml
                      , wreq

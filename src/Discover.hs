@@ -24,20 +24,21 @@ tao = 10000 :: SatoshiValue
 type Location = ByteString
 
 -- |Finds a mixing peer and returns its location to begin communication for fair exchange
-discover :: Chan Msg -> IO Location
-discover chan = flipCoin >>= pickRole
+discover :: Chan Msg -> Location -> Bool -> IO Location
+discover chan myLoc isBob = flipCoin >>= pickRole
   where
     pickRole heads
-      | heads || True = runAdvertiser chan
+      -- | heads = runAdvertiser chan
+      | isBob = runAdvertiser chan
       | otherwise = runRespondent
     flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
 
-selectAdvertiser :: IO ()
-selectAdvertiser = undefined
+selectAdvertiser :: IO Location
+selectAdvertiser = return "E5RK5YGUTKXMIGGV.onion"
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: IO ()
-publishPairRequest = undefined
+publishPairRequest = return ()
 
 -- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
 runRespondent :: IO Location

@@ -7,5 +7,5 @@ import Control.Concurrent.Chan (Chan)
 import Discover (Location)
 import PeerToPeer (Msg)
 
-fairExchange :: Chan Msg -> Location -> IO ()
-fairExchange _ _ = putStrLn "fairExchange called"
+fairExchange :: Chan Msg -> Location -> Location -> IO ()
+fairExchange _ _ _ = putStrLn "fairExchange called"

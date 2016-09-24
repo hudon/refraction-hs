@@ -10,18 +10,24 @@ There is a JavaScript prototype implementation linked in the references below. [
 
 ## User Guide
 
+Before running refraction, you need a running instance of Tor with version >= 0.2.7.1-alpha.
+
+Then, refraction will ask you for a prvkey it should sweep funds from, and an output
+address it should direct mixed funds to.
+
 ```
 > refraction
 Enter source private key:
 Enter destination address:
+
 info: source private key valid
 info: destination address valid
-info: mixing X BTC with Xim delta=Y
-info: starting Xim(delta)
-info: starting Discover()
-info: Advertising with|Responding to onion address:
-info: FairExchange()
-info: done! Mixed Z BTC now deposited in address:
+info: mixing X BTC
+info: starting round: 1
+info: finding exchange peers, please wait...
+info: peer found!
+info: mixing, please wait...
+info: done! Mixed Z BTC now deposited in address: <address>
 >
 ```
 

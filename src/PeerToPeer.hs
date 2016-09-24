@@ -9,6 +9,7 @@ module PeerToPeer
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, writeChan)
 import Control.Monad (liftM)
+import Network (PortNumber)
 import Network.Socket
 import System.IO
 
@@ -30,16 +31,15 @@ serverLoop sock chan = do
     forkIO $ runConn conn chan
     serverLoop sock chan
 
-startServer :: IO (Chan Msg)
-startServer = do
+startServer :: PortNumber -> IO (Chan Msg)
+startServer port = do
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
+    bind sock (SockAddrInet port iNADDR_ANY)
     listen sock 2
     chan <- newChan
     forkIO $ serverLoop sock chan
     return chan
-
 
 runClient :: HostName             -- ^ Remote hostname, or localhost
           -> String               -- ^ Port number or name; 4242 is default
