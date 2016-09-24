@@ -7,9 +7,10 @@ module Discover
     ( discover
     ) where
 
+import Blockchain (broadcast)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
-import Generator (makeOPRETURNTransaction, SatoshiValue)
+import Generator (makeAdData, makeAdTransaction, SatoshiValue)
 import Network.Haskoin.Transaction (Tx)
 import System.Random (getStdRandom, randomR)
 
@@ -42,8 +43,12 @@ runRespondent = do
 -- Advertiser: publish T{A -> A, tip = tao/2, TEXT(loc=alphaA, nonce=nA, pool=P}
 publishAd :: IO ()
 publishAd = do
-    let tx = either undefined id $ makeOPRETURNTransaction undefined undefined :: Tx
-    undefined
+    let nonce = undefined
+    let location = undefined
+    let opreturnData = makeAdData [location, nonce]
+    let utxos = undefined
+    let tx = either undefined id $ makeAdTransaction utxos opreturnData tao :: Tx
+    broadcast tx
 
 -- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
 selectRespondent :: IO ()

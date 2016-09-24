@@ -20,7 +20,7 @@ import Network.Wreq
 
 baseURL = "https://testnet.blockexplorer.com/api"
 
-broadcast :: B.ByteString -> IO ()
+broadcast :: Tx -> IO ()
 broadcast tx = undefined
 
 data ResponseTransaction = ResponseTransaction {
