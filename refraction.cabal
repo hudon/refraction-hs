@@ -25,6 +25,7 @@ library
                      , bytestring
                      , cereal
                      , haskoin-core
+                     , http-client
                      , lens
                      , network
                      , random
