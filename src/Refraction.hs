@@ -6,15 +6,17 @@ module Refraction
     , RefractionConfig
     ) where
 
+import Blockchain (broadcast, transaction, utxos)
 import Control.Monad (when)
 import qualified PeerToPeer as P2P
 import Data.Text (Text, append)
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
 import Data.Yaml
+import Generator (UTXO(..))
 import Network.Haskoin.Constants (switchToTestnet3)
+import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
-import Blockchain (utxos)
 
 -- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
@@ -48,16 +50,20 @@ isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
 handleBadAddress :: Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-testUTXO = do
-    res <- utxos "mhzR5xTtqya4CD2sMdkW2pFsH9cU5Ztsnd"
+testBlockchain = do
+    res@(x:xs) <- utxos "n3mWPA55iib5xp4dGQusuHozAzWHgDZ4U5"
     putStrLn $ show res
+    let UTXO txout outpoint = x
+    let OutPoint txhash index = outpoint
+    tx <- transaction txhash
+    broadcast tx
 
 refract :: RefractionConfig -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob ignoreValidation prv addr = do
     let btcNetwork = network . bitcoin $ config
     TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
     when (btcNetwork == "testnet3") switchToTestnet3
-    testUTXO
+    testBlockchain
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr

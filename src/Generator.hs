@@ -4,6 +4,7 @@ module Generator
     , makeAdData
     , makeAdTransaction
     , SatoshiValue
+    , UTXO(..)
     ) where
 
 import Data.ByteString (ByteString)
@@ -16,17 +17,16 @@ type SatoshiValue = Word64
 data UTXO = UTXO {
       _txOut :: TxOut
     , _outPoint :: OutPoint
-    , _prvKey :: PrvKey
-}
+} deriving (Show)
 
 instance Coin UTXO where
     coinValue =  outValue . _txOut
 
-makeSimpleTransaction :: [UTXO] -> Address -> Either String Tx
+makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
 makeSimpleTransaction utxos addr = undefined
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
-makeAdTransaction :: [UTXO] -> ByteString -> SatoshiValue -> Either String Tx
+makeAdTransaction :: [UTXO] -> [PrvKey] -> ByteString -> SatoshiValue -> Either String Tx
 makeAdTransaction = undefined
 
 -- |Takes a list of items and serializes so it is ready to be placed in a Tx

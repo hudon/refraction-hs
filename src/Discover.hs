@@ -47,7 +47,8 @@ publishAd = do
     let location = undefined
     let opreturnData = makeAdData [location, nonce]
     let utxos = undefined
-    let tx = either undefined id $ makeAdTransaction utxos opreturnData tao :: Tx
+    let keys = undefined
+    let tx = either undefined id $ makeAdTransaction utxos keys opreturnData tao :: Tx
     broadcast tx
 
 -- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
