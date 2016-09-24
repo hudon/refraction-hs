@@ -25,8 +25,8 @@ withinSession :: (ByteString -> IO ()) -> IO ()
 withinSession f = do
     torPort <- whichControlPort
     Tor.withSession torPort $ \controlSocket -> do
-        onion <- Tor.accept controlSocket 80 Nothing (newConnection 4242)
-        putStrLn $ "hidden service descriptor: " ++ show onion
+        --onion <- Tor.mapOnion controlSocket 80 Nothing (newConnection 4242)
+        onion <- Tor.mapOnion controlSocket 80 4242 False Nothing
         f . encodeUtf8 $ append (toText onion) ".onion"
   where
     newConnection privatePort sPublic =

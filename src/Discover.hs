@@ -29,16 +29,16 @@ discover chan myLoc isBob = flipCoin >>= pickRole
   where
     pickRole heads
       -- | heads = runAdvertiser chan
-      | not isBob = runAdvertiser chan
+      | isBob = runAdvertiser chan
       | otherwise = runRespondent
     flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
 
 selectAdvertiser :: IO Location
-selectAdvertiser = return "fusjzr7ihiijt3tb.onion"
+selectAdvertiser = return "E5RK5YGUTKXMIGGV.onion"
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: IO ()
-publishPairRequest = undefined
+publishPairRequest = return ()
 
 -- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
 runRespondent :: IO Location

@@ -65,6 +65,7 @@ startRound :: Bool -> IO ()
 startRound isBob = do
     chan <- P2P.startServer
     Tor.withinSession $ \myLocation -> do
+        putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob
         fairExchange chan myLocation theirLocation
 
