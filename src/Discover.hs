@@ -5,13 +5,16 @@
 -}
 module Discover
     ( discover
+    , Location
     ) where
 
 import Blockchain (broadcast)
+import Control.Concurrent.Chan (Chan, readChan)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
 import Network.Haskoin.Transaction (Tx)
+import PeerToPeer (Msg)
 import System.Random (getStdRandom, randomR)
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
@@ -21,9 +24,12 @@ tao = 10000 :: SatoshiValue
 type Location = ByteString
 
 -- |Finds a mixing peer and returns its location to begin communication for fair exchange
-discover :: IO Location
-discover = flipCoin >>= \heads -> if heads then runAdvertiser else runRespondent
+discover :: Chan Msg -> IO Location
+discover chan = flipCoin >>= pickRole
   where
+    pickRole heads
+      | heads || True = runAdvertiser chan
+      | otherwise = runRespondent
     flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
 
 selectAdvertiser :: IO ()
@@ -49,20 +55,27 @@ publishAd = do
     let utxos = undefined
     let keys = undefined
     let tx = either undefined id $ makeAdTransaction utxos keys opreturnData tao :: Tx
-    broadcast tx
+    --broadcast tx
+    putStrLn "ad published!"
 
 -- Advertiser: select respondent R, store sigAPK(nA paired to h(nR))" to alphaA
-selectRespondent :: IO ()
-selectRespondent = undefined
+selectRespondent :: Chan Msg -> IO Int
+selectRespondent chan = putStrLn "called select respondent" >> waitForRespondents 0
+  where
+    waitForRespondents n = do
+      msg <- readChan chan
+      putStrLn msg
+      if n > 2 then pickRespondent else waitForRespondents (n + 1)
+    pickRespondent = return 1
 
 -- Advertiser: publishes T{A -> A, tip = tao/2, TEXT(lock = h(nR), nA)}
 publishPairResponse :: IO ()
-publishPairResponse = undefined
+publishPairResponse = putStrLn "called publish pair response"
 
-runAdvertiser :: IO Location
-runAdvertiser = do
+runAdvertiser :: Chan Msg -> IO Location
+runAdvertiser chan = do
     publishAd
-    selectRespondent
+    r <- selectRespondent chan
     publishPairResponse
     return $ B8.pack "respondent-location.onion"
 

@@ -13,6 +13,8 @@ import Data.Text (Text, append)
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
 import Data.Yaml
+import Discover (discover)
+import FairExchange (fairExchange)
 import Generator (UTXO(..))
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
@@ -52,20 +54,26 @@ handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
 testBlockchain = do
     res@(x:xs) <- utxos "n3mWPA55iib5xp4dGQusuHozAzWHgDZ4U5"
-    putStrLn $ show res
+    --putStrLn $ show res
     let UTXO txout outpoint = x
     let OutPoint txhash index = outpoint
     tx <- transaction txhash
     broadcast tx
+
+startRound :: IO ()
+startRound = do
+    chan <- P2P.startServer
+    location <- discover chan
+    fairExchange chan location
 
 refract :: RefractionConfig -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob ignoreValidation prv addr = do
     let btcNetwork = network . bitcoin $ config
     TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
     when (btcNetwork == "testnet3") switchToTestnet3
-    testBlockchain
+    --testBlockchain
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
-        | isBob -> P2P.startServer
-        | otherwise -> P2P.startClient
+        | not isBob -> P2P.startClient
+        | otherwise -> startRound
