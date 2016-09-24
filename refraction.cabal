@@ -32,9 +32,8 @@ library
                      , lens
                      , network
                      , network-anonymous-tor
-                     , network-simple
                      , random
-                     , splice
+                     , socks
                      , text
                      , yaml
                      , wreq

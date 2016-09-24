@@ -1,14 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PeerToPeer
     ( Msg
+    , sendMessage
     , startServer
-    , startClient
     ) where
 
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, writeChan)
-import Control.Monad (liftM)
 import Network (PortNumber)
 import Network.Socket
 import System.IO
@@ -19,10 +18,9 @@ runConn :: (Socket, SockAddr) -> Chan Msg -> IO ()
 runConn (sock, _) chan = do
     hdl <- socketToHandle sock ReadWriteMode
     hSetBuffering hdl NoBuffering
-    clientHelloMsg <- hGetLine hdl
+    clientMsg <- hGetLine hdl
     hPutStrLn hdl "hi"
-    clientByeMsg <- liftM init (hGetLine hdl)
-    writeChan chan $ "client says: " ++ clientHelloMsg
+    writeChan chan $ "client says: " ++ clientMsg
     hClose hdl
 
 serverLoop :: Socket -> Chan Msg -> IO ()
@@ -41,31 +39,11 @@ startServer port = do
     forkIO $ serverLoop sock chan
     return chan
 
-runClient :: HostName             -- ^ Remote hostname, or localhost
-          -> String               -- ^ Port number or name; 4242 is default
-          -> IO ()
-runClient hostname port =
-    do -- Look up the hostname and port.  Either raises an exception
-       -- or returns a nonempty list.  First element in that list
-       -- is supposed to be the best option.
-       addrinfos <- getAddrInfo Nothing (Just hostname) (Just port)
-       let serveraddr = head addrinfos
-
-       -- Establish a socket for communication
-       sock <- socket (addrFamily serveraddr) Stream defaultProtocol
-
-       -- Connect to server
-       connect sock (addrAddress serveraddr)
-
-       -- Make a Handle out of it for convenience
-       h <- socketToHandle sock ReadWriteMode
-
-       hSetBuffering h NoBuffering
-
-       hPutStrLn h "hello!"
-       bobHiMsg <- liftM init (hGetLine h)
-       hPutStrLn h "bye"
-       hClose h
-
-startClient :: IO ()
-startClient = runClient "127.0.0.1" "4242"
+sendMessage :: Msg -> Socket -> IO ()
+sendMessage m sock = do
+     h <- socketToHandle sock ReadWriteMode
+     hSetBuffering h NoBuffering
+     hPutStrLn h m
+     bobHiMsg <- hGetLine h
+     putStrLn $ "bob says " ++ bobHiMsg
+     hClose h
