@@ -14,8 +14,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
 import Network.Haskoin.Transaction (Tx)
-import PeerToPeer (Msg)
+import PeerToPeer (Msg, sendMessage)
 import System.Random (getStdRandom, randomR)
+import Tor(secureConnect)
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
 -- Advertise fee
@@ -35,7 +36,10 @@ discover chan myLoc isBob isAlice = flipCoin >>= pickRole
     flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
 
 selectAdvertiser :: IO Location
-selectAdvertiser = return "E5RK5YGUTKXMIGGV.onion"
+selectAdvertiser = do
+    let theirLocation = "L4TSUOJSZU23TPQZ.onion"
+    secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    return theirLocation
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: IO ()

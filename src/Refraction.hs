@@ -20,7 +20,7 @@ import Network (PortNumber)
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
-import Tor (withinSession)
+import Tor (makeHiddenService)
 
 -- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
@@ -66,7 +66,7 @@ startRound :: Bool -> Bool -> IO ()
 startRound isBob isAlice = do
     let port = if isBob then 4242 else 4243 :: PortNumber
     chan <- P2P.startServer port
-    Tor.withinSession port $ \myLocation -> do
+    Tor.makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob isAlice
         fairExchange chan myLocation theirLocation
