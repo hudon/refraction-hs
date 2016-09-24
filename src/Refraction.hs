@@ -19,6 +19,7 @@ import Generator (UTXO(..))
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
+import Tor (withinSession)
 
 -- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
@@ -60,11 +61,12 @@ testBlockchain = do
     tx <- transaction txhash
     broadcast tx
 
-startRound :: IO ()
-startRound = do
+startRound :: Bool -> IO ()
+startRound isBob = do
     chan <- P2P.startServer
-    location <- discover chan
-    fairExchange chan location
+    Tor.withinSession $ \myLocation -> do
+        theirLocation <- discover chan myLocation isBob
+        fairExchange chan myLocation theirLocation
 
 refract :: RefractionConfig -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob ignoreValidation prv addr = do
@@ -75,5 +77,4 @@ refract config isBob ignoreValidation prv addr = do
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
-        | not isBob -> P2P.startClient
-        | otherwise -> startRound
+        | otherwise -> startRound isBob

@@ -40,7 +40,6 @@ startServer = do
     forkIO $ serverLoop sock chan
     return chan
 
-
 runClient :: HostName             -- ^ Remote hostname, or localhost
           -> String               -- ^ Port number or name; 4242 is default
           -> IO ()

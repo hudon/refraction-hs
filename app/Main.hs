@@ -53,6 +53,9 @@ runRefraction :: Bool -> Bool -> IO ()
 runRefraction isBob ignoreValidation = do
     touchConfig
     config <- readConfig
+    T.putStr "Please start Tor. Is Tor running? (y/n): "
+    hFlush stdout
+    _ <- T.getLine
     T.putStr "Enter source private key (WIF encoded): "
     hFlush stdout
     prvkey <- T.getLine
