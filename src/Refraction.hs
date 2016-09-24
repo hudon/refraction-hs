@@ -62,17 +62,17 @@ testBlockchain = do
     tx <- transaction txhash
     broadcast tx
 
-startRound :: Bool -> IO ()
-startRound isBob = do
+startRound :: Bool -> Bool -> IO ()
+startRound isBob isAlice = do
     let port = if isBob then 4242 else 4243 :: PortNumber
     chan <- P2P.startServer port
     Tor.withinSession port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
-        theirLocation <- discover chan myLocation isBob
+        theirLocation <- discover chan myLocation isBob isAlice
         fairExchange chan myLocation theirLocation
 
-refract :: RefractionConfig -> Bool -> Bool -> Text -> Text -> IO ()
-refract config isBob ignoreValidation prv addr = do
+refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> IO ()
+refract config isBob isAlice ignoreValidation prv addr = do
     let btcNetwork = network . bitcoin $ config
     TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
     when (btcNetwork == "testnet3") switchToTestnet3
@@ -80,4 +80,4 @@ refract config isBob ignoreValidation prv addr = do
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
-        | otherwise -> startRound isBob
+        | otherwise -> startRound isBob isAlice

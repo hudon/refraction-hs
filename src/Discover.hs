@@ -24,12 +24,13 @@ tao = 10000 :: SatoshiValue
 type Location = ByteString
 
 -- |Finds a mixing peer and returns its location to begin communication for fair exchange
-discover :: Chan Msg -> Location -> Bool -> IO Location
-discover chan myLoc isBob = flipCoin >>= pickRole
+discover :: Chan Msg -> Location -> Bool -> Bool -> IO Location
+discover chan myLoc isBob isAlice = flipCoin >>= pickRole
   where
     pickRole heads
-      -- | heads = runAdvertiser chan
-      | isBob = runAdvertiser chan
+      | isBob = runAdvertiser chan -- TODO: for debug purposes, to be removed
+      | isAlice = runRespondent -- TODO: for debug purposes, to be removed
+      | heads = runAdvertiser chan
       | otherwise = runRespondent
     flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
 
