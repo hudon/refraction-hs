@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Generator
     ( makeSimpleTransaction
-    , makeOPRETURNTransaction
+    , makeAdData
+    , makeAdTransaction
     , SatoshiValue
     ) where
 
-import qualified Data.ByteString as B
+import Data.ByteString (ByteString)
 import Data.Word (Word64)
 import Network.Haskoin.Crypto (Address, PrvKey)
 import Network.Haskoin.Transaction (Coin, coinValue, OutPoint, outValue, Tx, TxOut)
@@ -24,5 +25,10 @@ instance Coin UTXO where
 makeSimpleTransaction :: [UTXO] -> Address -> Either String Tx
 makeSimpleTransaction utxos addr = undefined
 
-makeOPRETURNTransaction :: [UTXO] -> B.ByteString -> Either String Tx
-makeOPRETURNTransaction = undefined
+-- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
+makeAdTransaction :: [UTXO] -> ByteString -> SatoshiValue -> Either String Tx
+makeAdTransaction = undefined
+
+-- |Takes a list of items and serializes so it is ready to be placed in a Tx
+makeAdData :: [ByteString] -> ByteString
+makeAdData = undefined
