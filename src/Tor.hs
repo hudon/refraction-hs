@@ -10,6 +10,7 @@ import Data.Text (append, Text)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Network.Anonymous.Tor as Tor
 import qualified Network.Simple.TCP as NST
+import Network (PortNumber)
 import Network.Socket
 import qualified Network.Socket.Splice as Splice
 import System.IO (IOMode(ReadWriteMode))
@@ -21,12 +22,11 @@ whichControlPort = do
     availability <- mapM Tor.isAvailable ports
     return . fst . head . filter ((== Tor.Available) . snd) $ zip ports availability
 
-withinSession :: (ByteString -> IO ()) -> IO ()
-withinSession f = do
+withinSession :: PortNumber -> (ByteString -> IO ()) -> IO ()
+withinSession privatePort f = do
     torPort <- whichControlPort
     Tor.withSession torPort $ \controlSocket -> do
-        --onion <- Tor.mapOnion controlSocket 80 Nothing (newConnection 4242)
-        onion <- Tor.mapOnion controlSocket 80 4242 False Nothing
+        onion <- Tor.mapOnion controlSocket 80 (toInteger privatePort) False Nothing
         f . encodeUtf8 $ append (toText onion) ".onion"
   where
     newConnection privatePort sPublic =

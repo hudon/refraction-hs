@@ -16,6 +16,7 @@ import Data.Yaml
 import Discover (discover)
 import FairExchange (fairExchange)
 import Generator (UTXO(..))
+import Network (PortNumber)
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
@@ -63,8 +64,9 @@ testBlockchain = do
 
 startRound :: Bool -> IO ()
 startRound isBob = do
-    chan <- P2P.startServer
-    Tor.withinSession $ \myLocation -> do
+    let port = if isBob then 4242 else 4243 :: PortNumber
+    chan <- P2P.startServer port
+    Tor.withinSession port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob
         fairExchange chan myLocation theirLocation
