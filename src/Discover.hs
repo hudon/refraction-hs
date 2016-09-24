@@ -10,7 +10,6 @@ module Discover
 
 import Blockchain (broadcast)
 import Control.Concurrent.Chan (Chan, readChan)
-import Control.Monad.Fix (fix)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
