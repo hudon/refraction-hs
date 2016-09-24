@@ -1,35 +1,44 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PeerToPeer
-    ( startServer
+    ( Msg
+    , startServer
     , startClient
     ) where
 
 
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Chan (Chan, newChan, writeChan)
 import Control.Monad (liftM)
 import Network.Socket
 import System.IO
 
-runConn :: (Socket, SockAddr) -> Int -> IO ()
-runConn (sock, _) msgNum = do
+type Msg = String
+
+runConn :: (Socket, SockAddr) -> Chan Msg -> IO ()
+runConn (sock, _) chan = do
     hdl <- socketToHandle sock ReadWriteMode
     hSetBuffering hdl NoBuffering
-    aliceHelloMsg <- liftM init (hGetLine hdl)
+    clientHelloMsg <- hGetLine hdl
     hPutStrLn hdl "hi"
-    aliceByeMsg <- liftM init (hGetLine hdl)
+    clientByeMsg <- liftM init (hGetLine hdl)
+    writeChan chan $ "client says: " ++ clientHelloMsg
     hClose hdl
 
-mainLoop :: Socket -> Int -> IO ()
-mainLoop sock msgNum = do
-  conn <- accept sock
-  runConn conn msgNum
+serverLoop :: Socket -> Chan Msg -> IO ()
+serverLoop sock chan = do
+    conn <- accept sock
+    forkIO $ runConn conn chan
+    serverLoop sock chan
 
-startServer :: IO ()
+startServer :: IO (Chan Msg)
 startServer = do
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
     bind sock (SockAddrInet 4242 iNADDR_ANY)
     listen sock 2
-    mainLoop sock 0
+    chan <- newChan
+    forkIO $ serverLoop sock chan
+    return chan
 
 
 runClient :: HostName             -- ^ Remote hostname, or localhost
@@ -53,7 +62,7 @@ runClient hostname port =
 
        hSetBuffering h NoBuffering
 
-       hPutStrLn h "hello"
+       hPutStrLn h "hello!"
        bobHiMsg <- liftM init (hGetLine h)
        hPutStrLn h "bye"
        hClose h
