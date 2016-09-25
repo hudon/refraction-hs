@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PeerToPeer
-    ( Msg
+    ( unsecureConnect
+    , Msg
     , sendMessage
     , startServer
     ) where
@@ -47,3 +48,11 @@ sendMessage m sock = do
      bobHiMsg <- hGetLine h
      putStrLn $ "bob says " ++ bobHiMsg
      hClose h
+
+unsecureConnect :: HostName -> String -> (Socket -> IO ()) ->  IO ()
+unsecureConnect hostname port f = do
+    addrinfos <- getAddrInfo Nothing (Just hostname) (Just port)
+    let serveraddr = head addrinfos
+    sock <- socket (addrFamily serveraddr) Stream defaultProtocol
+    connect sock (addrAddress serveraddr)
+    f sock

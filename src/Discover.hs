@@ -14,7 +14,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
 import Network.Haskoin.Transaction (Tx)
-import PeerToPeer (Msg, sendMessage)
+import PeerToPeer (Msg, sendMessage, unsecureConnect)
 import System.Random (getStdRandom, randomR)
 import Tor(secureConnect)
 
@@ -38,7 +38,10 @@ discover chan myLoc isBob isAlice = flipCoin >>= pickRole
 selectAdvertiser :: IO Location
 selectAdvertiser = do
     let theirLocation = "L4TSUOJSZU23TPQZ.onion"
-    secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    -- TODO: we can't use Tor until we have the ad transaction on the blockchain
+    -- stuff working because the locations are dynamic. Use direct connection for now.
+    --secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    unsecureConnect "127.0.01" "4242" (sendMessage "i am alice, wanna trade bitcoins?")
     return theirLocation
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
