@@ -2,7 +2,7 @@
 
 ## Why do we need better privacy in bitcoin?
 
-Greg Maxwell explains it in his proposal for Confidential Transactions [3]:
+Greg Maxwell explains it well in his proposal for Confidential Transactions [3]:
 
 > Insufficient financial privacy can have serious security and privacy
 > implications for both commercial and personal transactions. Without
