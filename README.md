@@ -27,11 +27,9 @@ Greg Maxwell explains it in his proposal for Confidential Transactions [3]:
 
 ## Decentralized Bitcoin Mixing Service
 
-Refraction is sybil-resistant mixing for Bitcoin.
+Refraction is an application that allows you to have complete financial privacy with your Bitcoin. It is decentralized and peer-to-peer. All it relies on is the Bitcoin network and the users running Refraction. It is resistant to Sybil and timing attacks, with configurable parameters to opt for more or less security depending on your time constraints.
 
-The goal is to fully implement the Xim protocol explained in [0] which depends on the FairExchange protocol [1].
-
-There is a JavaScript prototype implementation linked in the references below. [2]
+It is an implementation of the Xim protocol explained in [0] which depends on the FairExchange protocol [1].
 
 
 ## User Guide
@@ -84,12 +82,8 @@ info: done! Mixed Z BTC now deposited in address: <address>
 
 ### Roadmap
 
-1. Create FairExchange MVP over TCP
-2. Move to onion routing
-3. Implement discovery MVP
-4. Reduce dependence on centralized third parties
-5. Alpha release
-
+1. Create Xim MVP over Tor
+2. Move to SPV rather than a third party block explorer
 
 ## References
 
@@ -98,6 +92,4 @@ info: done! Mixed Z BTC now deposited in address: <address>
 
 [1] http://elaineshi.com/docs/bitcoin.pdf (section 7 is the relevant part -- FairExchange)
 
-[2] https://github.com/hudon/refraction (javascript prototype, currently does FairExchange over Tor but no Xim Discover())
-
-[3] https://people.xiph.org/~greg/confidential_values.txt
+[2] https://people.xiph.org/~greg/confidential_values.txt
