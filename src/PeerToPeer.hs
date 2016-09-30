@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PeerToPeer
-    ( unsecureConnect
+    ( unsecureSend
     , Msg
     , sendMessage
     , startServer
@@ -9,19 +9,24 @@ module PeerToPeer
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, writeChan)
+import Control.Monad (liftM)
+import Data.ByteString (hGetLine)
+import Data.ByteString.Lazy.Char8 (hPutStrLn)
+import qualified Data.ByteString.Lazy as BL
+import Data.Text (append)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network (PortNumber)
 import Network.Socket
-import System.IO
+import System.IO hiding (hGetLine, hPutStrLn)
 
-type Msg = String
+type Msg = BL.ByteString
 
 runConn :: (Socket, SockAddr) -> Chan Msg -> IO ()
 runConn (sock, _) chan = do
     hdl <- socketToHandle sock ReadWriteMode
     hSetBuffering hdl NoBuffering
-    clientMsg <- hGetLine hdl
-    hPutStrLn hdl "hi"
-    writeChan chan $ "client says: " ++ clientMsg
+    clientMsg <- liftM BL.fromStrict $ hGetLine hdl
+    writeChan chan clientMsg
     hClose hdl
 
 serverLoop :: Socket -> Chan Msg -> IO ()
@@ -45,8 +50,6 @@ sendMessage m sock = do
      h <- socketToHandle sock ReadWriteMode
      hSetBuffering h NoBuffering
      hPutStrLn h m
-     bobHiMsg <- hGetLine h
-     putStrLn $ "bob says " ++ bobHiMsg
      hClose h
 
 unsecureConnect :: HostName -> String -> (Socket -> IO ()) ->  IO ()
@@ -56,3 +59,8 @@ unsecureConnect hostname port f = do
     sock <- socket (addrFamily serveraddr) Stream defaultProtocol
     connect sock (addrAddress serveraddr)
     f sock
+
+unsecureSend :: Bool -> Msg -> IO ()
+unsecureSend isBob m = do
+    let port = if isBob then "4243" else "4242"
+    unsecureConnect "127.0.0.1" port (sendMessage m)

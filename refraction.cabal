@@ -22,17 +22,22 @@ library
                      , PeerToPeer
                      , Refraction
                      , Tor
+-- TODO: restrict these deps to safer ranges
   build-depends:       aeson
                      , base >= 4.7 && < 5
+                     , base16-bytestring
                      , base32string
                      , bytestring
                      , cereal
+                     , DRBG
                      , haskoin-core
                      , http-client
                      , lens
+                     , MonadRandom
                      , network
                      , network-anonymous-tor
                      , random
+                     , random-shuffle
                      , socks
                      , text
                      , yaml
