@@ -30,17 +30,6 @@ fairExchange isBob isAlice chan _ theirLocation = do
     setupSecrets isBob chan theirLocation
     putStrLn "fairExchange called"
 
-data KeysMessage = KeysMessage {
-      key1 :: Maybe PubKey
-    , key2 :: Maybe PubKey
-    , hex1 :: [Text] -- ^ hex encoded
-    , hex2 :: Maybe [Text] -- ^ hex encoded, alice doesn't need this field
-} deriving (Generic)
-
-instance ToJSON KeysMessage
-
-instance FromJSON KeysMessage
-
 setupSecrets :: Bool -> Chan Msg -> Location -> IO ()
 setupSecrets isBob chan _ = do
     keypair1 <- makeKeyPair
@@ -52,65 +41,7 @@ setupSecrets isBob chan _ = do
     f chan keypair1 keypair2 n m mySecrets
   where
     makeKeyPair = genKey >>= \p -> return (p, derivePubKey p)
-
-setupBobSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
-setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
-    aliceKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
-    let aliceSecrets = map hexTextToBs $ hex1 aliceKeys
-    let bobHashes = map (bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict) mySecrets
-    let sums = zipWith sumSecrets aliceSecrets mySecrets
-    let sumHashes = map (bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict) sums
-    unsecureSend True . encode $ KeysMessage (Just pubkey1) (Just pubkey2) bobHashes (Just sumHashes)
-    indices <- liftM (fromMaybe undefined . decode) $ readChan chan
-    unsecureSend True . encodeSecrets $ map ((!!) mySecrets) indices
-    _ <- readChan chan
-    --return (mySecrets, aliceSecrets, bobHashes, sumHashes, keypairs, aliceKeys)
-    return ()
-
-setupAliceSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
-setupAliceSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) m n mySecrets = do
-    unsecureSend False . encode $ KeysMessage (Just pubkey1) (Just pubkey2) (map (decodeUtf8 . encodeHex) mySecrets) Nothing
-    bobKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
-    indices <- evalRandIO $ liftM (take m) $ shuffleM [1..n]
-    unsecureSend False (encode indices)
-    bobSecrets <- liftM decodeSecrets (readChan chan)
-    verifySecrets bobSecrets mySecrets (map (either undefined id . S.decodeLazy . hexTextToBs) $ hex1 bobKeys) (map (either undefined id . S.decodeLazy . hexTextToBs) . fromMaybe undefined $ hex2 bobKeys)
-    unsecureSend False "ok"
-    --return (mySecrets, bobHashes, sumHashes bobKeys)
-    return ()
-
-sumSecrets :: Secret -> Secret -> SecretSum
-sumSecrets x y = S.encodeLazy $ (int x) + (int y)
-  where
-    int :: Secret -> Integer
-    int = either undefined id . S.decodeLazy
-
-encodeSecrets :: [Secret] -> Msg
-encodeSecrets = encode . map bsToHexText
-
-decodeSecrets :: Msg -> [Secret]
-decodeSecrets = map hexTextToBs . fromMaybe undefined . decode
-
-bsToHexText :: BL.ByteString -> Text
-bsToHexText = decodeUtf8 . encodeHex
-
-hexTextToBs :: Text -> BL.ByteString
-hexTextToBs = fromMaybe undefined . decodeHex . encodeUtf8
-
--- | Decode hexadecimal lazy 'ByteString'. This function can fail if the string
--- contains invalid hexadecimal (0-9, a-f, A-F) characters
-decodeHex :: BL.ByteString -> Maybe BL.ByteString
-decodeHex bs =
-    let (x, b) = B16.decode bs
-    in guard (b == BL.empty) >> return x
-
-encodeHex = B16.encode
-
-verifySecrets :: [Secret] -> [Secret] -> [Hash256] -> [Hash256] -> IO Bool
-verifySecrets bSecrets aSecrets bHashes sumHashes = return True
-
-genKey :: IO PrvKey
-genKey = withSource getEntropy genPrvKey
+    genKey = withSource getEntropy genPrvKey
 
 genSecrets :: Int -> IO [Secret]
 genSecrets n
@@ -126,3 +57,59 @@ genSecrets n
         case genBytes size g of
             Left err -> error $ show err
             Right (result, g2) -> return $ BL.fromStrict result
+
+data KeysMessage = KeysMessage {
+      key1 :: Maybe PubKey
+    , key2 :: Maybe PubKey
+    , hex1 :: [Text] -- ^ hex encoded
+    , hex2 :: Maybe [Text] -- ^ hex encoded, alice doesn't need this field
+} deriving (Generic)
+
+instance ToJSON KeysMessage
+
+instance FromJSON KeysMessage
+
+setupBobSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
+setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
+    aliceKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
+    let aliceSecrets = map hexTextToBs $ hex1 aliceKeys
+    let bobHashes = map hashAndEncode mySecrets
+    let sums = zipWith sumSecrets aliceSecrets mySecrets
+    let sumHashes = map hashAndEncode sums
+    send $ KeysMessage (Just pubkey1) (Just pubkey2) bobHashes (Just sumHashes)
+    indices <- liftM (fromMaybe undefined . decode) $ readChan chan
+    send $ map (bsToHexText . (!!) mySecrets) indices
+    return ()
+  where
+    hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict
+    send x = unsecureSend True (encode x)
+    sumSecrets x y = S.encodeLazy $ (int x) + (int y)
+    int :: Secret -> Integer
+    int = either undefined id . S.decodeLazy
+
+setupAliceSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
+setupAliceSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) m n mySecrets = do
+    send $ KeysMessage (Just pubkey1) (Just pubkey2) (map bsToHexText mySecrets) Nothing
+    bobKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
+    indices <- evalRandIO $ liftM (take m) $ shuffleM [1..n]
+    send indices
+    bobSecrets <- liftM decodeSecrets (readChan chan)
+    verifySecrets bobSecrets mySecrets (map decodeHashes $ hex1 bobKeys) (map decodeHashes . fromMaybe undefined $ hex2 bobKeys)
+    return ()
+  where
+    decodeHashes = either undefined id . S.decodeLazy . hexTextToBs
+    send x = unsecureSend False (encode x)
+    decodeSecrets = map hexTextToBs . fromMaybe undefined . decode
+
+bsToHexText :: BL.ByteString -> Text
+bsToHexText = decodeUtf8 . B16.encode
+
+hexTextToBs :: Text -> BL.ByteString
+hexTextToBs = fromMaybe undefined . decodeHex . encodeUtf8
+  where
+    decodeHex bs =
+        let (x, b) = B16.decode bs
+        in guard (b == BL.empty) >> return x
+
+verifySecrets :: [Secret] -> [Secret] -> [Hash256] -> [Hash256] -> IO Bool
+verifySecrets bSecrets aSecrets bHashes sumHashes = return True
