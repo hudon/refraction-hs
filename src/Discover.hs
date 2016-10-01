@@ -12,9 +12,10 @@ import Blockchain (broadcast)
 import Control.Concurrent.Chan (Chan, readChan)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
+import Data.Text.Encoding (decodeUtf8)
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
 import Network.Haskoin.Transaction (Tx)
-import PeerToPeer (Msg, sendMessage)
+import PeerToPeer (Msg, sendMessage, unsecureSend)
 import System.Random (getStdRandom, randomR)
 import Tor(secureConnect)
 
@@ -33,12 +34,15 @@ discover chan myLoc isBob isAlice = flipCoin >>= pickRole
       | isAlice = runRespondent -- TODO: for debug purposes, to be removed
       | heads = runAdvertiser chan
       | otherwise = runRespondent
-    flipCoin = getStdRandom (randomR (1 :: Int, 100)) >>= return . (> 50)
+    flipCoin = getStdRandom (randomR ((1 :: Int), 100)) >>= return . (> 50)
 
 selectAdvertiser :: IO Location
 selectAdvertiser = do
     let theirLocation = "L4TSUOJSZU23TPQZ.onion"
-    secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    -- TODO: we can't use Tor until we have the ad transaction on the blockchain
+    -- stuff working because the locations are dynamic. Use direct connection for now.
+    --secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    unsecureSend False "i am alice, wanna trade bitcoins?"
     return theirLocation
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
@@ -70,9 +74,9 @@ selectRespondent chan = putStrLn "called select respondent" >> waitForRespondent
   where
     waitForRespondents n = do
       msg <- readChan chan
-      putStrLn msg
-      if n > 2 then pickRespondent else waitForRespondents (n + 1)
-    pickRespondent = return 1
+      -- TODO have an actual picking mechanism
+      if n == 0 then pickRespondent else waitForRespondents (n + 1)
+    pickRespondent = putStrLn "picked a respondent" >> return 1
 
 -- Advertiser: publishes T{A -> A, tip = tao/2, TEXT(lock = h(nR), nA)}
 publishPairResponse :: IO ()

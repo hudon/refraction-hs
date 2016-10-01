@@ -69,7 +69,7 @@ startRound isBob isAlice = do
     Tor.makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob isAlice
-        fairExchange chan myLocation theirLocation
+        fairExchange isBob isAlice chan myLocation theirLocation
 
 refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob isAlice ignoreValidation prv addr = do
