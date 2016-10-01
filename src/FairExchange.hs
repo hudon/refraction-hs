@@ -86,19 +86,6 @@ setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
     hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict
     send x = unsecureSend True (encode x)
     sumSecrets s1 s2 = integerToS $ (sToInteger s1) + (sToInteger s2)
-    --sumSecrets bs1 bs2 = BL.pack $ byteSum (BL.unpack bs1) (BL.unpack bs2)
-
--- TODO: unless a better way is found, implementing a bytestring-math package that has
--- Num instances for lazy and strict ByteStrings would be useful. Inspired by math-buffer package
--- in node/npm
-byteSum :: [Word8] -> [Word8] -> [Word8]
-byteSum = byteSum' 0
-  where
-    byteSum' 0 [] [] = []
-    byteSum' 1 [] [] = [1]
-    byteSum' carry (x:xs) (y:ys) =
-        let v = x + y + carry
-        in v : byteSum' (if v < x || v < y then 1 else 0) xs ys
 
 sToInteger :: Secret -> Integer
 sToInteger = fromDigits 0 . BL.unpack
