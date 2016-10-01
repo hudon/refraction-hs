@@ -74,8 +74,9 @@ selectRespondent chan = putStrLn "called select respondent" >> waitForRespondent
   where
     waitForRespondents n = do
       msg <- readChan chan
-      if n > 2 then pickRespondent else waitForRespondents (n + 1)
-    pickRespondent = return 1
+      -- TODO have an actual picking mechanism
+      if n == 0 then pickRespondent else waitForRespondents (n + 1)
+    pickRespondent = putStrLn "picked a respondent" >> return 1
 
 -- Advertiser: publishes T{A -> A, tip = tao/2, TEXT(lock = h(nR), nA)}
 publishPairResponse :: IO ()

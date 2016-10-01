@@ -15,6 +15,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8, encodeUtf8)
 import qualified Data.Serialize as S
+import Data.Word
 import Discover (Location)
 import GHC.Generics
 import Network.Haskoin.Crypto (derivePubKey, doubleHash256, getEntropy, genPrvKey, Hash256, PrvKey, PubKey, withSource)
@@ -22,8 +23,9 @@ import PeerToPeer (Msg, unsecureSend)
 import System.Random.Shuffle (shuffleM)
 
 type KeyPair = (PrvKey, PubKey)
+-- Because we'll be summing up these secrets, it's important to note that these bytes are
+-- in little endian. The least significant byte comes first.
 type Secret = BL.ByteString
-type SecretSum = BL.ByteString
 
 fairExchange :: Bool -> Bool -> Chan Msg -> Location -> Location -> IO ()
 fairExchange isBob isAlice chan _ theirLocation = do
@@ -59,8 +61,8 @@ genSecrets n
             Right (result, g2) -> return $ BL.fromStrict result
 
 data KeysMessage = KeysMessage {
-      key1 :: Maybe PubKey
-    , key2 :: Maybe PubKey
+      key1 :: PubKey
+    , key2 :: PubKey
     , hex1 :: [Text] -- ^ hex encoded
     , hex2 :: Maybe [Text] -- ^ hex encoded, alice doesn't need this field
 } deriving (Generic)
@@ -76,20 +78,25 @@ setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
     let bobHashes = map hashAndEncode mySecrets
     let sums = zipWith sumSecrets aliceSecrets mySecrets
     let sumHashes = map hashAndEncode sums
-    send $ KeysMessage (Just pubkey1) (Just pubkey2) bobHashes (Just sumHashes)
+    send $ KeysMessage pubkey1 pubkey2 bobHashes (Just sumHashes)
     indices <- liftM (fromMaybe undefined . decode) $ readChan chan
     send $ map (bsToHexText . (!!) mySecrets) indices
     return ()
   where
     hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict
     send x = unsecureSend True (encode x)
-    sumSecrets x y = S.encodeLazy $ (int x) + (int y)
-    int :: Secret -> Integer
-    int = either undefined id . S.decodeLazy
+    sumSecrets bs1 bs2 = BL.pack $ byteSum (BL.unpack bs1) (BL.unpack bs2)
+
+byteSum :: [Word8] -> [Word8] -> [Word8]
+byteSum = byteSum' 0
+  where
+    byteSum' 0 [] [] = []
+    byteSum' 1 [] [] = [1]
+    byteSum' carry (x:xs) (y:ys) = let v = x + y + carry in v : byteSum' (if v < x || v < y then 1 else 0) xs ys
 
 setupAliceSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
 setupAliceSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) m n mySecrets = do
-    send $ KeysMessage (Just pubkey1) (Just pubkey2) (map bsToHexText mySecrets) Nothing
+    send $ KeysMessage pubkey1 pubkey2 (map bsToHexText mySecrets) Nothing
     bobKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
     indices <- evalRandIO $ liftM (take m) $ shuffleM [1..n]
     send indices
