@@ -24,7 +24,7 @@ import System.Random.Shuffle (shuffleM)
 
 type KeyPair = (PrvKey, PubKey)
 -- Because we'll be summing up these secrets, it's important to note that these bytes are
--- in little endian. The least significant byte comes first.
+-- in big endian. The most significant byte comes first.
 type Secret = BL.ByteString
 
 fairExchange :: Bool -> Bool -> Chan Msg -> Location -> Location -> IO ()
@@ -85,14 +85,33 @@ setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
   where
     hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict
     send x = unsecureSend True (encode x)
-    sumSecrets bs1 bs2 = BL.pack $ byteSum (BL.unpack bs1) (BL.unpack bs2)
+    sumSecrets s1 s2 = integerToS $ (sToInteger s1) + (sToInteger s2)
+    --sumSecrets bs1 bs2 = BL.pack $ byteSum (BL.unpack bs1) (BL.unpack bs2)
 
+-- TODO: unless a better way is found, implementing a bytestring-math package that has
+-- Num instances for lazy and strict ByteStrings would be useful. Inspired by math-buffer package
+-- in node/npm
 byteSum :: [Word8] -> [Word8] -> [Word8]
 byteSum = byteSum' 0
   where
     byteSum' 0 [] [] = []
     byteSum' 1 [] [] = [1]
-    byteSum' carry (x:xs) (y:ys) = let v = x + y + carry in v : byteSum' (if v < x || v < y then 1 else 0) xs ys
+    byteSum' carry (x:xs) (y:ys) =
+        let v = x + y + carry
+        in v : byteSum' (if v < x || v < y then 1 else 0) xs ys
+
+sToInteger :: Secret -> Integer
+sToInteger = fromDigits 0 . BL.unpack
+  where
+    fromDigits n [] = n
+    fromDigits n (x:xs) = fromDigits (n * 256 + (toInteger x)) xs
+
+integerToS :: Integer -> Secret
+integerToS = BL.pack . reverse . toDigits
+  where
+    toDigits 0 = []
+    toDigits x = (fromIntegral $ x `mod` 256) : toDigits (x `div` 256)
+
 
 setupAliceSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
 setupAliceSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) m n mySecrets = do
