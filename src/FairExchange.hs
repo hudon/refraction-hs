@@ -51,8 +51,8 @@ genSecrets n = do
 data BobKeyMessage = BobKeyMessage {
       bKey1 :: PubKey
     , bKey2 :: PubKey
-    , bHashes :: [Text] -- ^ hex encoded
-    , bSumHashes :: [Text] -- ^ hex encoded, alice doesn't need this field
+    , bHashes :: [Text] -- ^ text for the hex-encoded bytestring
+    , bSumHashes :: [Text] -- ^ text for the hex-encoded bytestring
 } deriving (Generic)
 
 instance ToJSON BobKeyMessage
