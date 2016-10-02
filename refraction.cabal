@@ -29,15 +29,15 @@ library
                      , base32string
                      , bytestring
                      , cereal
+                     , crypto-api
                      , DRBG
                      , haskoin-core
                      , http-client
                      , lens
-                     , MonadRandom
+                     , monadcryptorandom
                      , network
                      , network-anonymous-tor
                      , random
-                     , random-shuffle
                      , socks
                      , text
                      , yaml

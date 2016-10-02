@@ -7,8 +7,8 @@ module FairExchange
 import Data.Aeson (decode, encode, FromJSON, ToJSON)
 import Control.Concurrent.Chan (Chan, readChan)
 import Control.Monad (guard, liftM)
-import Control.Monad.Random (evalRandIO)
-import Crypto.Random.DRBG (CtrDRBG, genBytes, newGenIO)
+import Control.Monad.CryptoRandom (crandomRs)
+import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import qualified Data.ByteString.Base16.Lazy as B16
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe (fromMaybe)
@@ -20,12 +20,9 @@ import Discover (Location)
 import GHC.Generics
 import Network.Haskoin.Crypto (derivePubKey, doubleHash256, getEntropy, genPrvKey, Hash256, PrvKey, PubKey, withSource)
 import PeerToPeer (Msg, unsecureSend)
-import System.Random.Shuffle (shuffleM)
 
 type KeyPair = (PrvKey, PubKey)
--- Because we'll be summing up these secrets, it's important to note that these bytes are
--- in big endian. The most significant byte comes first.
-type Secret = BL.ByteString
+type Secret = Integer
 
 fairExchange :: Bool -> Bool -> Chan Msg -> Location -> Location -> IO ()
 fairExchange isBob isAlice chan _ theirLocation = do
@@ -45,74 +42,68 @@ setupSecrets isBob chan _ = do
     makeKeyPair = genKey >>= \p -> return (p, derivePubKey p)
     genKey = withSource getEntropy genPrvKey
 
-genSecrets :: Int -> IO [Secret]
-genSecrets n
-  | n > 0 = do
-    secret <- genSecret
-    secrets <- genSecrets (n - 1)
-    return $ secret : secrets
-  | otherwise = return []
-  where
-    genSecret = do
-        g <- newGenIO :: IO CtrDRBG
-        let size = 256
-        case genBytes size g of
-            Left err -> error $ show err
-            Right (result, g2) -> return $ BL.fromStrict result
+genSecrets :: Int -> IO [Integer]
+genSecrets n = do
+    -- TODO: just use 1 generator for this module? instead of using a new one to shuffle later
+    g <- newGenIO :: IO CtrDRBG
+    return . take n $ crandomRs (-2^255, 2^255-1) g
 
-data KeysMessage = KeysMessage {
-      key1 :: PubKey
-    , key2 :: PubKey
-    , hex1 :: [Text] -- ^ hex encoded
-    , hex2 :: Maybe [Text] -- ^ hex encoded, alice doesn't need this field
+data BobKeyMessage = BobKeyMessage {
+      bKey1 :: PubKey
+    , bKey2 :: PubKey
+    , bHashes :: [Text] -- ^ hex encoded
+    , bSumHashes :: [Text] -- ^ hex encoded, alice doesn't need this field
 } deriving (Generic)
 
-instance ToJSON KeysMessage
+instance ToJSON BobKeyMessage
 
-instance FromJSON KeysMessage
+instance FromJSON BobKeyMessage
 
 setupBobSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
 setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
     aliceKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
-    let aliceSecrets = map hexTextToBs $ hex1 aliceKeys
+    let aliceSecrets = aSecrets aliceKeys
     let bobHashes = map hashAndEncode mySecrets
-    let sums = zipWith sumSecrets aliceSecrets mySecrets
+    let sums = zipWith (+) aliceSecrets mySecrets
     let sumHashes = map hashAndEncode sums
-    send $ KeysMessage pubkey1 pubkey2 bobHashes (Just sumHashes)
+    send $ BobKeyMessage pubkey1 pubkey2 bobHashes sumHashes
     indices <- liftM (fromMaybe undefined . decode) $ readChan chan
-    send $ map (bsToHexText . (!!) mySecrets) indices
+    send $ map ((!!) mySecrets) indices
     return ()
   where
-    hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . BL.toStrict
+    hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . S.encode
     send x = unsecureSend True (encode x)
-    sumSecrets s1 s2 = integerToS $ (sToInteger s1) + (sToInteger s2)
 
-sToInteger :: Secret -> Integer
-sToInteger = fromDigits 0 . BL.unpack
-  where
-    fromDigits n [] = n
-    fromDigits n (x:xs) = fromDigits (n * 256 + (toInteger x)) xs
+data AliceKeysMessage = AliceKeysMessage {
+      aKey1 :: PubKey
+    , aKey2 :: PubKey
+    , aSecrets :: [Secret]
+} deriving (Generic)
 
-integerToS :: Integer -> Secret
-integerToS = BL.pack . reverse . toDigits
-  where
-    toDigits 0 = []
-    toDigits x = (fromIntegral $ x `mod` 256) : toDigits (x `div` 256)
+instance ToJSON AliceKeysMessage
 
+instance FromJSON AliceKeysMessage
 
 setupAliceSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> IO ()
 setupAliceSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) m n mySecrets = do
-    send $ KeysMessage pubkey1 pubkey2 (map bsToHexText mySecrets) Nothing
+    send $ AliceKeysMessage pubkey1 pubkey2 mySecrets
     bobKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
-    indices <- evalRandIO $ liftM (take m) $ shuffleM [1..n]
+    indices <- liftM (take m) $ shuffle [1..n]
     send indices
     bobSecrets <- liftM decodeSecrets (readChan chan)
-    verifySecrets bobSecrets mySecrets (map decodeHashes $ hex1 bobKeys) (map decodeHashes . fromMaybe undefined $ hex2 bobKeys)
+    verifySecrets bobSecrets mySecrets (map decodeHashes $ bHashes bobKeys) (map decodeHashes $ bSumHashes bobKeys)
     return ()
   where
     decodeHashes = either undefined id . S.decodeLazy . hexTextToBs
     send x = unsecureSend False (encode x)
-    decodeSecrets = map hexTextToBs . fromMaybe undefined . decode
+    decodeSecrets = fromMaybe undefined . decode
+
+shuffle :: [a] -> IO [a]
+shuffle [] = return []
+shuffle xs = do
+    g <- newGenIO :: IO CtrDRBG
+    let (ys, (v:zs)) = splitAt (head $ crandomRs (0, length xs - 1) g) xs
+    liftM ((:) v) $ shuffle (ys ++ zs)
 
 bsToHexText :: BL.ByteString -> Text
 bsToHexText = decodeUtf8 . B16.encode
