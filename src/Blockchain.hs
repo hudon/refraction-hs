@@ -107,7 +107,7 @@ fetchRecentBlocks = do
     fetchBlockchain tipHash depth
         | depth < 1 = return []
         | otherwise = do
-            let url = concat [baseURL, "/block/", B8.unpack $ blockHashToHex tipHash]
+            let url = concat [baseURL, "/rawblock/", B8.unpack $ blockHashToHex tipHash]
             r <- get url
             let b = toBlock $ r ^. responseBody . key "rawblock" . _String
             prevBlocks <- fetchBlockchain (prevBlock (blockHeader b)) (depth - 1)
