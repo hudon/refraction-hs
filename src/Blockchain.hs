@@ -22,7 +22,7 @@ import Generator (SatoshiValue, UTXO(..))
 import GHC.Generics (Generic)
 import Network.Haskoin.Block (Block, BlockHash, blockHashToHex, blockHeader, blockTxns, headerHash, hexToBlockHash, prevBlock)
 import Network.Haskoin.Crypto (Address, addrToBase58)
-import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
+import Network.Haskoin.Script (Script(..), ScriptOp(..))
 import Network.Haskoin.Transaction (hexToTxHash, OutPoint(..), scriptOutput, Tx, TxHash, txOut, TxOut(..), txHashToHex)
 import Network.Haskoin.Util (decodeHex, decodeToMaybe)
 import Network.HTTP.Client (HttpException(..))
@@ -81,17 +81,17 @@ utxos addr = do
     r <- asJSON =<< get url
     return . map toUTXO $ r ^. responseBody
 
-findOPRETURNs :: [BlockHash] -> IO ([[ScriptOp]], [BlockHash])
+findOPRETURNs :: [BlockHash] -> IO ([Script], [BlockHash])
 findOPRETURNs excludes = do
     blocks <- fetchRecentBlocks excludes
     let findTxns = filter isDataCarrier . map firstScript . concat . map blockTxns
     return (findTxns blocks, excludes `union` map blockHash blocks)
   where
     blockHash = headerHash . blockHeader
-    firstScript :: Tx -> [ScriptOp]
-    firstScript = scriptOps . either undefined id . S.decode . scriptOutput . head . txOut
+    firstScript :: Tx -> Script
+    firstScript = either undefined id . S.decode . scriptOutput . head . txOut
     -- TODO: use Haskoin DataCarrier logic instead once released
-    isDataCarrier [OP_RETURN, OP_PUSHDATA _ _] = True
+    isDataCarrier (Script [OP_RETURN, OP_PUSHDATA _ _]) = True
     isDataCarrier _ = False
 
 fetchRecentBlocks :: [BlockHash] -> IO [Block]
