@@ -3,6 +3,7 @@ module Generator
     ( makeSimpleTransaction
     , makeAdData
     , makeAdTransaction
+    , makeAliceCommit
     , makeBobCommit
     , SatoshiValue
     , UTXO(..)
