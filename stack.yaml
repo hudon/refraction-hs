@@ -2,8 +2,13 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
+- location:
+    git: git@github.com:haskoin/haskoin
+    commit: 3f2b04cc735f5fb78a9338031d6bf7e86bd4de7c
+  subdirs:
+  - haskoin-core
+  extra-dep: true
 extra-deps:
-- haskoin-core-0.4.0
 - murmur3-1.0.2
 - pbkdf-1.1.1.1
 - secp256k1-0.4.6

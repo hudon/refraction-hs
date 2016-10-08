@@ -10,6 +10,7 @@ module Generator
 import Data.Word (Word64)
 import Data.ByteString (ByteString)
 import Network.Haskoin.Crypto (PrvKey, Address)
+import Network.Haskoin.Script (ScriptOutput(DataCarrier))
 import qualified Network.Haskoin.Script as S
 import qualified Network.Haskoin.Transaction as T
 
