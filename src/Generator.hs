@@ -45,16 +45,39 @@ makeSimpleTransaction utxos prvkeys addr =
     let tx = either undefined id $ T.buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
         in T.signTx tx (map mkInput utxos) prvkeys
 
+makeAliceCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String T.Tx
+makeAliceCommit utxos prvkeys aPubkey bPubkey bHashes =
+    let redeemScript = makeAliceCommitRedeem aPubkey bPubkey bHashes 100000
+    in signP2SH utxos prvkeys redeemScript
+
 makeBobCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String T.Tx
 makeBobCommit utxos prvkeys aPubkey bPubkey bHashes =
     let redeemScript = makeBobCommitRedeem aPubkey bPubkey bHashes 100000
-        scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
-        tx = either undefined id $ T.buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
-        in T.signTx tx (map mkInput utxos) prvkeys
+    in signP2SH utxos prvkeys redeemScript
 
 -- TODO put this is haskoin
 scriptAddrNonStd :: Script -> Address
 scriptAddrNonStd = ScriptAddress . hash160 . getHash256 . hash256 . S.encode
+
+signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String T.Tx
+signP2SH utxos prvkeys redeemScript =
+    let scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
+        tx = either undefined id $ T.buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
+    in T.signTx tx (map mkInput utxos) prvkeys
+
+makeAliceCommitRedeem :: PubKey -> PubKey -> [Hash256] -> Integer -> Script
+makeAliceCommitRedeem aPubkey bPubkey sumHashes locktime =
+    Script $ [ OP_IF
+             -- OP_NOP2 is OP_CHECKLOCKTIMEVERIFY (CLTV)
+             -- TODO update haskoin with cltv op
+             , opPushData (S.encode locktime), OP_NOP2, OP_DROP
+             , opPushData (S.encode aPubkey), OP_CHECKSIG
+             , OP_ELSE
+             , opPushData (S.encode bPubkey), OP_CHECKSIGVERIFY
+             ] ++
+             concat (map (\hash -> [OP_HASH256, opPushData (S.encode hash), OP_EQUALVERIFY]) (init sumHashes)) ++
+             [ OP_HASH256, opPushData $ S.encode (last sumHashes), OP_EQUAL ] ++
+             [ OP_ENDIF ]
 
 makeBobCommitRedeem :: PubKey -> PubKey -> [Hash256] -> Integer -> Script
 makeBobCommitRedeem aPubkey bPubkey bHashes locktime =
