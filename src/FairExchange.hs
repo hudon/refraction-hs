@@ -34,9 +34,9 @@ setupSecrets isBob chan _ = do
     keypair1 <- makeKeyPair
     keypair2 <- makeKeyPair
     let n = 20
-    let m = 5
+        m = 5
+        f = if isBob then setupBobSecrets else setupAliceSecrets
     mySecrets <- genSecrets n
-    let f = if isBob then setupBobSecrets else setupAliceSecrets
     f chan keypair1 keypair2 n m mySecrets
   where
     makeKeyPair = genKey >>= \p -> return (p, derivePubKey p)
@@ -63,9 +63,9 @@ setupBobSecrets :: Chan Msg -> KeyPair -> KeyPair -> Int -> Int -> [Secret] -> I
 setupBobSecrets chan (prvkey1, pubkey1) (prvkey2, pubkey2) n _ mySecrets = do
     aliceKeys <- liftM (fromMaybe undefined . decode) $ readChan chan
     let aliceSecrets = aSecrets aliceKeys
-    let bobHashes = map hashAndEncode mySecrets
-    let sums = zipWith (+) aliceSecrets mySecrets
-    let sumHashes = map hashAndEncode sums
+        bobHashes = map hashAndEncode mySecrets
+        sums = zipWith (+) aliceSecrets mySecrets
+        sumHashes = map hashAndEncode sums
     send $ BobKeyMessage pubkey1 pubkey2 bobHashes sumHashes
     indices <- liftM (fromMaybe undefined . decode) $ readChan chan
     send $ map ((!!) mySecrets) indices

@@ -54,7 +54,7 @@ selectAdvertiser = do
     findAd = findAd' []
     findAd' excludeHashes = do
         (opreturns, newExcludes) <- findOPRETURNs excludeHashes
-        let adM = find isAd opreturns
+        let adM = find (isAd . scriptOps) opreturns
         case adM of
             -- If there were no ads, sleep for 30 seconds and try again
             Nothing -> threadDelay 30000000 >> findAd' newExcludes
