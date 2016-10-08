@@ -12,7 +12,7 @@ var privateKey = new bitcore.PrivateKey('cQrgind4kVZbZpfAVfZq8Nw6HcPBZyT2pktrn2t
 // use haskoin faucet to get some coins http://faucet.xeno-genesis.com/
 // use https://testnet.blockexplorer.com/ to find the faucet transactions
 var utxo = {
-  "txId" : "94361af4c3fc113fcb705eca3d90368d3c3be7e5b9d803808f64d1ab41f0c8da",
+  "txId" : "1c7a7f9488d330c60363c2ceed8417c8b44bdcf131a9e53a798d59adaa0f1e44",
   "outputIndex" : 1,
   "address" : "moCvBdctTGGBwquWx647GvQWAsr4XBQBXh",
 // get the script from going to https://testnet.blockexplorer.com/tx/<tx hash> and looking for
@@ -31,4 +31,5 @@ var transaction = new bitcore.Transaction()
       .sign([privateKey])
 
 var serialized = transaction.toString();
+// use https://testnet.blockexplorer.com/tx/send to broadcast
 console.log(serialized);

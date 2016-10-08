@@ -83,34 +83,33 @@ utxos addr = do
 
 findOPRETURNs :: [BlockHash] -> IO ([[ScriptOp]], [BlockHash])
 findOPRETURNs excludes = do
-    recentBlocks <- fetchRecentBlocks
-    let blocks = filter (\b -> blockHash b `notElem` excludes) recentBlocks
-        findTxns = filter isDataCarrier . map firstScript . concat . map blockTxns
+    blocks <- fetchRecentBlocks excludes
+    let findTxns = filter isDataCarrier . map firstScript . concat . map blockTxns
     return (findTxns blocks, excludes `union` map blockHash blocks)
   where
     blockHash = headerHash . blockHeader
     firstScript :: Tx -> [ScriptOp]
     firstScript = scriptOps . either undefined id . S.decode . scriptOutput . head . txOut
     -- TODO: use Haskoin DataCarrier logic instead once released
-    isDataCarrier :: [ScriptOp] -> Bool
     isDataCarrier [OP_RETURN, OP_PUSHDATA _ _] = True
     isDataCarrier _ = False
 
-fetchRecentBlocks :: IO [Block]
-fetchRecentBlocks = do
+fetchRecentBlocks :: [BlockHash] -> IO [Block]
+fetchRecentBlocks excludes = do
     let url = baseURL ++ "/status?q=getLastBlockHash"
     r <- get url
     let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
-    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) 10
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 10
   where
-    fetchBlockchain :: BlockHash -> Int -> IO [Block]
-    fetchBlockchain tipHash depth
+    fetchBlockchain :: BlockHash -> [BlockHash] -> Int -> IO [Block]
+    fetchBlockchain tipHash excludes depth
         | depth < 1 = return []
+        | tipHash `elem` excludes = return []
         | otherwise = do
             let url = concat [baseURL, "/rawblock/", B8.unpack $ blockHashToHex tipHash]
             r <- get url
             let b = toBlock $ r ^. responseBody . key "rawblock" . _String
-            prevBlocks <- fetchBlockchain (prevBlock (blockHeader b)) (depth - 1)
+            prevBlocks <- fetchBlockchain (prevBlock (blockHeader b)) excludes (depth - 1)
             return $ b : prevBlocks
     toBlock :: T.Text -> Block
     toBlock = either undefined id . S.decode . fromMaybe undefined . decodeHex . encodeUtf8

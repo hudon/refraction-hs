@@ -56,8 +56,8 @@ selectAdvertiser = do
         (opreturns, newExcludes) <- findOPRETURNs excludeHashes
         let adM = find isAd opreturns
         case adM of
-            -- If there were no ads, sleep for 10 seconds and try again
-            Nothing -> threadDelay 10000000 >> findAd' newExcludes
+            -- If there were no ads, sleep for 30 seconds and try again
+            Nothing -> threadDelay 30000000 >> findAd' newExcludes
             Just ad -> return ad
     isAd [OP_RETURN, OP_PUSHDATA bs _] = "RFRCTN" == decodeUtf8 bs
     isAd _ = False
