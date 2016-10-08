@@ -101,7 +101,7 @@ fetchRecentBlocks = do
     let url = baseURL ++ "/status?q=getLastBlockHash"
     r <- get url
     let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
-    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) 3
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) 10
   where
     fetchBlockchain :: BlockHash -> Int -> IO [Block]
     fetchBlockchain tipHash depth
