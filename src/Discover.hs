@@ -8,13 +8,18 @@ module Discover
     , Location
     ) where
 
-import Blockchain (broadcast)
+import Blockchain (broadcast, findOPRETURNs)
 import Control.Concurrent.Chan (Chan, readChan)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
+import Data.List (find)
+import Control.Concurrent (threadDelay)
+import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8)
 import Generator (makeAdData, makeAdTransaction, SatoshiValue)
-import Network.Haskoin.Transaction (Tx)
+import Network.Haskoin.Block (BlockHash)
+import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
+import Network.Haskoin.Transaction (scriptOutput, Tx, txOut)
 import PeerToPeer (Msg, sendMessage, unsecureSend)
 import System.Random (getStdRandom, randomR)
 import Tor(secureConnect)
@@ -39,11 +44,23 @@ discover chan myLoc isBob isAlice = flipCoin >>= pickRole
 selectAdvertiser :: IO Location
 selectAdvertiser = do
     let theirLocation = "L4TSUOJSZU23TPQZ.onion"
+    ad <- findAd
     -- TODO: we can't use Tor until we have the ad transaction on the blockchain
     -- stuff working because the locations are dynamic. Use direct connection for now.
     --secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
     unsecureSend False "i am alice, wanna trade bitcoins?"
     return theirLocation
+  where
+    findAd = findAd' []
+    findAd' excludeHashes = do
+        (opreturns, newExcludes) <- findOPRETURNs excludeHashes
+        let adM = find isAd opreturns
+        case adM of
+            -- If there were no ads, sleep for 30 seconds and try again
+            Nothing -> threadDelay 30000000 >> findAd' newExcludes
+            Just ad -> return ad
+    isAd [OP_RETURN, OP_PUSHDATA bs _] = "RFRCTN" == decodeUtf8 bs
+    isAd _ = False
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: IO ()

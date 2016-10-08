@@ -34,6 +34,7 @@ library
                      , haskoin-core
                      , http-client
                      , lens
+                     , lens-aeson
                      , monadcryptorandom
                      , network
                      , network-anonymous-tor

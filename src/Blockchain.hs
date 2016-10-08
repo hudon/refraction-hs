@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 module Blockchain
     ( broadcast
+    , findOPRETURNs
     , transaction
     , utxos
     ) where
@@ -8,17 +9,21 @@ module Blockchain
 import Control.Exception (try)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON, toJSON)
+import Data.Aeson.Lens (_String, key)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import Data.List (union)
 import Data.Maybe (fromMaybe)
-import Data.Serialize (decode)
-import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
+import qualified Data.Serialize as S
+import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Word (Word32)
 import Generator (SatoshiValue, UTXO(..))
 import GHC.Generics (Generic)
+import Network.Haskoin.Block (Block, BlockHash, blockHashToHex, blockHeader, blockTxns, headerHash, hexToBlockHash, prevBlock)
 import Network.Haskoin.Crypto (Address, addrToBase58)
-import Network.Haskoin.Transaction (hexToTxHash, OutPoint(..), Tx, TxHash, TxOut(..), txHashToHex)
+import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
+import Network.Haskoin.Transaction (hexToTxHash, OutPoint(..), scriptOutput, Tx, TxHash, txOut, TxOut(..), txHashToHex)
 import Network.Haskoin.Util (decodeHex, decodeToMaybe)
 import Network.HTTP.Client (HttpException(..))
 import Network.Wreq
@@ -59,7 +64,7 @@ data ResponseUTXO = ResponseUTXO {
       txid :: TxHash
     , vout :: Word32
     , satoshis :: SatoshiValue
-    , scriptPubKey :: Text
+    , scriptPubKey :: T.Text
 } deriving (Generic)
 
 instance FromJSON ResponseUTXO
@@ -75,3 +80,36 @@ utxos addr = do
     let url = baseURL ++ "/addr/" ++ B8.unpack (addrToBase58 addr) ++ "/utxo"
     r <- asJSON =<< get url
     return . map toUTXO $ r ^. responseBody
+
+findOPRETURNs :: [BlockHash] -> IO ([[ScriptOp]], [BlockHash])
+findOPRETURNs excludes = do
+    blocks <- fetchRecentBlocks excludes
+    let findTxns = filter isDataCarrier . map firstScript . concat . map blockTxns
+    return (findTxns blocks, excludes `union` map blockHash blocks)
+  where
+    blockHash = headerHash . blockHeader
+    firstScript :: Tx -> [ScriptOp]
+    firstScript = scriptOps . either undefined id . S.decode . scriptOutput . head . txOut
+    -- TODO: use Haskoin DataCarrier logic instead once released
+    isDataCarrier [OP_RETURN, OP_PUSHDATA _ _] = True
+    isDataCarrier _ = False
+
+fetchRecentBlocks :: [BlockHash] -> IO [Block]
+fetchRecentBlocks excludes = do
+    let url = baseURL ++ "/status?q=getLastBlockHash"
+    r <- get url
+    let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 10
+  where
+    fetchBlockchain :: BlockHash -> [BlockHash] -> Int -> IO [Block]
+    fetchBlockchain tipHash excludes depth
+        | depth < 1 = return []
+        | tipHash `elem` excludes = return []
+        | otherwise = do
+            let url = concat [baseURL, "/rawblock/", B8.unpack $ blockHashToHex tipHash]
+            r <- get url
+            let b = toBlock $ r ^. responseBody . key "rawblock" . _String
+            prevBlocks <- fetchBlockchain (prevBlock (blockHeader b)) excludes (depth - 1)
+            return $ b : prevBlocks
+    toBlock :: T.Text -> Block
+    toBlock = either undefined id . S.decode . fromMaybe undefined . decodeHex . encodeUtf8
