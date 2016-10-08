@@ -3,6 +3,7 @@ module Generator
     ( makeSimpleTransaction
     , makeAdData
     , makeAdTransaction
+    , makeBobCommit
     , SatoshiValue
     , UTXO(..)
     ) where
@@ -59,6 +60,7 @@ makeBobCommitRedeem :: PubKey -> PubKey -> [Hash256] -> Integer -> Script
 makeBobCommitRedeem aPubkey bPubkey bHashes locktime =
     Script $ [ OP_IF
              -- OP_NOP2 is OP_CHECKLOCKTIMEVERIFY (CLTV)
+             -- TODO update haskoin with cltv op
              , opPushData (S.encode locktime), OP_NOP2, OP_DROP
              , opPushData (S.encode bPubkey), OP_CHECKSIG
              , OP_ELSE
