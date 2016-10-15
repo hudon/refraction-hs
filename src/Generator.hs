@@ -6,6 +6,7 @@ module Generator
     , makeAliceCommit
     , makeBobClaim
     , makeBobCommit
+    , makePairRequest
     , SatoshiValue
     , UTXO(..)
     ) where
@@ -137,5 +138,17 @@ makeAdTransaction :: [UTXO] -- ^ The outputs to spend
                   -> Either String Tx
 makeAdTransaction utxos prvkeys loc nonce adFee ref = do
     let ad = B.concat [ref, loc, S.encode nonce]
+        tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
+    signTx tx (map mkInput utxos) prvkeys
+
+-- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
+makePairRequest :: [UTXO] -- ^ The outputs to spend
+                -> [PrvKey] -- ^ the keys to sign with
+                -> (Word64, Word64) -- ^ the nonce pair to encode
+                -> SatoshiValue -- ^ the ad fee
+                -> B.ByteString -- ^ the Refraction identifier
+                -> Either String Tx
+makePairRequest utxos prvkeys (aNonce, rNonce) adFee ref = do
+    let ad = B.concat [ref, S.encode aNonce, S.encode rNonce]
         tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
     signTx tx (map mkInput utxos) prvkeys
