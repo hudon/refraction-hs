@@ -83,7 +83,7 @@ info: done! Mixed Z BTC now deposited in address: <address>
 ### Roadmap
 
 1. Create Xim MVP over Tor
-2. Move to SPV rather than a third party block explorer
+2. Move to using a trusted full node rather than a third party block explorer
 
 ## References
 
