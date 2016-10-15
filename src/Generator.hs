@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Generator
     ( makeSimpleTransaction
-    , makeAdData
     , makeAdTransaction
     , makeAliceClaim
     , makeAliceCommit
@@ -12,7 +11,8 @@ module Generator
     ) where
 
 import Data.Word (Word64)
-import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
+import Data.ByteString.Char8 (pack)
 import qualified Data.Serialize as S
 import Network.Haskoin.Crypto
 import Network.Haskoin.Script
@@ -128,9 +128,14 @@ makeBobCommitRedeem aPubkey bPubkey bHashes locktime =
              [ OP_ENDIF ]
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
-makeAdTransaction :: [UTXO] -> [PrvKey] -> ByteString -> SatoshiValue -> Either String Tx
-makeAdTransaction = undefined
-
--- |Takes a list of items and serializes so it is ready to be placed in a Tx
-makeAdData :: [ByteString] -> ByteString
-makeAdData = undefined
+makeAdTransaction :: [UTXO] -- ^ The outputs to spend
+                  -> [PrvKey] -- ^ the keys to sign with
+                  -> B.ByteString -- ^ the location to encode in the ad
+                  -> Word64 -- ^ the ad nonce to encode
+                  -> SatoshiValue -- ^ the ad fee
+                  -> B.ByteString -- ^ the Refraction identifier
+                  -> Either String Tx
+makeAdTransaction utxos prvkeys loc nonce adFee ref = do
+    let ad = B.concat [ref, loc, S.encode nonce]
+        tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
+    signTx tx (map mkInput utxos) prvkeys

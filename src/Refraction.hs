@@ -8,7 +8,7 @@ module Refraction
 
 import Blockchain (broadcast, transaction, utxos)
 import Control.Monad (when)
-import qualified PeerToPeer as P2P
+import Data.Maybe
 import Data.Text (Text, append)
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
@@ -20,6 +20,7 @@ import Network (PortNumber)
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
+import qualified PeerToPeer as P2P
 import Tor (makeHiddenService)
 
 -- There may be a simpler way to express this, but this is our config file type declaration
@@ -62,13 +63,13 @@ testBlockchain = do
     tx <- transaction txhash
     broadcast tx
 
-startRound :: Bool -> Bool -> IO ()
-startRound isBob isAlice = do
+startRound :: Bool -> Bool -> C.PrvKey -> C.Address -> IO ()
+startRound isBob isAlice prv addr = do
     let port = if isBob then 4242 else 4243 :: PortNumber
     chan <- P2P.startServer port
     Tor.makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
-        theirLocation <- discover chan myLocation isBob isAlice
+        theirLocation <- discover chan myLocation isBob isAlice prv
         fairExchange isBob isAlice chan myLocation theirLocation
 
 refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> IO ()
@@ -80,4 +81,7 @@ refract config isBob isAlice ignoreValidation prv addr = do
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr
-        | otherwise -> startRound isBob isAlice
+        | otherwise -> startRound isBob isAlice p a
+  where
+    p = fromMaybe undefined . C.fromWif $ TE.encodeUtf8 prv
+    a = fromMaybe undefined . C.base58ToAddr $ TE.encodeUtf8 addr
