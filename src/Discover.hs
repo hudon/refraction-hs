@@ -20,7 +20,7 @@ import Data.Maybe
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Word
-import Generator (makeAdTransaction, SatoshiValue)
+import Generator (makeAdTransaction, makePairRequest, SatoshiValue)
 import Network.Haskoin.Block (BlockHash)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
@@ -45,9 +45,9 @@ discover chan myLoc isBob isAlice prv = flipCoin >>= pickRole
   where
     pickRole heads
       | isBob = runAdvertiser chan prv myLoc -- TODO: for debug purposes, to be removed
-      | isAlice = runRespondent -- TODO: for debug purposes, to be removed
+      | isAlice = runRespondent prv -- TODO: for debug purposes, to be removed
       | heads = runAdvertiser chan prv myLoc
-      | otherwise = runRespondent
+      | otherwise = runRespondent prv
     -- TODO use crypto-api everywhere
     flipCoin = getStdRandom (randomR ((1 :: Int), 100)) >>= return . (> 50)
 
@@ -77,14 +77,22 @@ selectAdvertiser = do
     parseAd _ = Nothing
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
-publishPairRequest :: IO ()
-publishPairRequest = return ()
+publishPairRequest :: PrvKey -> Nonce -> IO Nonce
+publishPairRequest prvkey aNonce = do
+    g <- newGenIO :: IO CtrDRBG
+    let rNonce = head $ crandomRs (minBound, maxBound) g :: Nonce
+        addr = pubKeyAddr $ derivePubKey prvkey
+    utxos <- utxos addr
+    let tx = either undefined id $ makePairRequest utxos [prvkey] (aNonce, rNonce) tao (encodeUtf8 adFinder)
+    broadcast tx
+    putStrLn "pair request published!"
+    return rNonce
 
 -- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
-runRespondent :: IO Location
-runRespondent = do
+runRespondent :: PrvKey -> IO Location
+runRespondent prvkey = do
     (loc, nonce) <- selectAdvertiser
-    publishPairRequest
+    publishPairRequest prvkey nonce
     return $ B8.pack "advertiser-location.onion"
 
 -- Advertiser: publish T{A -> A, tip = tao/2, TEXT(loc=alphaA, nonce=nA, pool=P}
