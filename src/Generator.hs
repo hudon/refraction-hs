@@ -3,7 +3,9 @@ module Generator
     ( makeSimpleTransaction
     , makeAdData
     , makeAdTransaction
+    , makeAliceClaim
     , makeAliceCommit
+    , makeBobClaim
     , makeBobCommit
     , SatoshiValue
     , UTXO(..)
@@ -12,59 +14,88 @@ module Generator
 import Data.Word (Word64)
 import Data.ByteString (ByteString)
 import qualified Data.Serialize as S
-import Network.Haskoin.Crypto (Address(..), getHash256, hash160, hash256, Hash256, PrvKey, PubKey)
-import Network.Haskoin.Script (decodeOutputBS, opPushData, Script(..), ScriptOp(..), ScriptOutput(..), SigHash(..))
-import qualified Network.Haskoin.Transaction as T
+import Network.Haskoin.Crypto
+import Network.Haskoin.Script
+import Network.Haskoin.Transaction
+import Network.Haskoin.Util (updateIndex)
 
 type SatoshiValue = Word64
 
 data UTXO = UTXO {
-      _txOut :: T.TxOut
-    , _outPoint :: T.OutPoint
+      _txOut :: TxOut
+    , _outPoint :: OutPoint
 } deriving (Show)
 
-instance T.Coin UTXO where
-    coinValue =  T.outValue . _txOut
+instance Coin UTXO where
+    coinValue =  outValue . _txOut
 
 -- Default transaction fee in satoshis
 dTxFee = 10000
 
 -- |Takes a UTXO and returns a SigInput that can be used to sign a Tx
-mkInput :: UTXO -> T.SigInput
-mkInput utxo = T.SigInput pso (_outPoint utxo) (SigAll False) Nothing
-  where pso = either undefined id . decodeOutputBS . T.scriptOutput $ _txOut utxo
+mkInput :: UTXO -> SigInput
+mkInput utxo = SigInput pso (_outPoint utxo) (SigAll False) Nothing
+  where pso = either undefined id . decodeOutputBS . scriptOutput $ _txOut utxo
 
 -- |Our miner fee grows linearly with the number of inputs
 calculateAmount :: [UTXO] -> SatoshiValue
 calculateAmount = foldl sumVal 0
   where
-    sumVal v utxo = v + T.coinValue utxo - dTxFee
+    sumVal v utxo = v + coinValue utxo - dTxFee
 
 -- |Takes a list of utxos and associated private keys and pays to an address
-makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String T.Tx
+makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
 makeSimpleTransaction utxos prvkeys addr =
-    let tx = either undefined id $ T.buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
-        in T.signTx tx (map mkInput utxos) prvkeys
+    let tx = either undefined id $ buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    in signTx tx (map mkInput utxos) prvkeys
 
-makeAliceCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String T.Tx
-makeAliceCommit utxos prvkeys aPubkey bPubkey bHashes =
-    let redeemScript = makeAliceCommitRedeem aPubkey bPubkey bHashes 100000
-    in signP2SH utxos prvkeys redeemScript
+-- We reverse the hashes here because the redeem script will expect the secrets in reverse order
+makeAliceCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String (Tx, Script)
+makeAliceCommit utxos prvkeys aPubkey bPubkey bHashes = do
+    let redeemScript = makeAliceCommitRedeem aPubkey bPubkey (reverse bHashes) 100000
+    tx <- signP2SH utxos prvkeys redeemScript
+    return (tx, redeemScript)
 
-makeBobCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String T.Tx
-makeBobCommit utxos prvkeys aPubkey bPubkey bHashes =
+makeAliceClaim :: [UTXO] -> [PrvKey] -> Script -> Integer -> PubKey -> Either String Tx
+makeAliceClaim utxos prvkeys redeemScript secret aPubkey = do
+    let addr = pubKeyAddr aPubkey
+    unsigned <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    signClaimTx unsigned [secret] 0 redeemScript (head prvkeys)
+
+makeBobCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String (Tx, Script)
+makeBobCommit utxos prvkeys aPubkey bPubkey bHashes = do
     let redeemScript = makeBobCommitRedeem aPubkey bPubkey bHashes 100000
-    in signP2SH utxos prvkeys redeemScript
+    tx <- signP2SH utxos prvkeys redeemScript
+    return (tx, redeemScript)
+
+makeBobClaim :: [UTXO] -> [PrvKey] -> Script -> [Integer] -> PubKey -> Either String Tx
+makeBobClaim utxos prvkeys redeemScript sums bPubkey = do
+    let addr = pubKeyAddr bPubkey
+    unsigned <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    signClaimTx unsigned sums 0 redeemScript (head prvkeys)
+
+-- TODO does this need to be in an either?
+-- | Sign a single input in a transaction deterministically (RFC-6979).
+signClaimTx :: Tx -> [Integer] -> Int -> Script -> PrvKey -> Either String Tx
+signClaimTx tx inputData i rdm key = do
+    let sh = SigAll False
+        sig = TxSignature (signMsg (txSigHash tx rdm i sh) key) sh
+        ins = updateIndex i (txIn tx) (addInput sig)
+    return $ createTx (txVersion tx) ins (txOut tx) (txLockTime tx)
+  where
+    addInput sig x = x{ scriptInput = S.encode . si $ encodeSig sig }
+    si sig = Script $
+        map (opPushData . S.encode) inputData ++ [opPushData sig, OP_0, opPushData $ S.encode rdm]
 
 -- TODO put this is haskoin
 scriptAddrNonStd :: Script -> Address
 scriptAddrNonStd = ScriptAddress . hash160 . getHash256 . hash256 . S.encode
 
-signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String T.Tx
+signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String Tx
 signP2SH utxos prvkeys redeemScript =
     let scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
-        tx = either undefined id $ T.buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
-    in T.signTx tx (map mkInput utxos) prvkeys
+        tx = either undefined id $ buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
+    in signTx tx (map mkInput utxos) prvkeys
 
 makeAliceCommitRedeem :: PubKey -> PubKey -> [Hash256] -> Integer -> Script
 makeAliceCommitRedeem aPubkey bPubkey sumHashes locktime =
@@ -97,7 +128,7 @@ makeBobCommitRedeem aPubkey bPubkey bHashes locktime =
              [ OP_ENDIF ]
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
-makeAdTransaction :: [UTXO] -> [PrvKey] -> ByteString -> SatoshiValue -> Either String T.Tx
+makeAdTransaction :: [UTXO] -> [PrvKey] -> ByteString -> SatoshiValue -> Either String Tx
 makeAdTransaction = undefined
 
 -- |Takes a list of items and serializes so it is ready to be placed in a Tx
