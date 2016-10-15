@@ -16,6 +16,7 @@ import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import Data.List (find)
+import Data.Maybe
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Word
@@ -33,8 +34,10 @@ import Tor(secureConnect)
 tao = 10000 :: SatoshiValue
 
 adFinder = "RFRCTN"
+onionLengthWithoutTLD = 16
 
 type Location = ByteString
+type Nonce = Word64
 
 -- |Finds a mixing peer and returns its location to begin communication for fair exchange
 discover :: Chan Msg -> Location -> Bool -> Bool -> PrvKey -> IO Location
@@ -48,26 +51,30 @@ discover chan myLoc isBob isAlice prv = flipCoin >>= pickRole
     -- TODO use crypto-api everywhere
     flipCoin = getStdRandom (randomR ((1 :: Int), 100)) >>= return . (> 50)
 
-selectAdvertiser :: IO Location
+selectAdvertiser :: IO (Location, Nonce)
 selectAdvertiser = do
-    let theirLocation = "L4TSUOJSZU23TPQZ.onion"
-    ad <- findAd
+    ad@(loc, n) <- findAd
+    let theirLocation = B8.concat [loc, encodeUtf8 ".onion"]
+        nonce = either undefined id $ S.decode n
     -- TODO: we can't use Tor until we have the ad transaction on the blockchain
     -- stuff working because the locations are dynamic. Use direct connection for now.
-    --secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
-    unsecureSend False "i am alice, wanna trade bitcoins?"
-    return theirLocation
+    secureConnect theirLocation (sendMessage "i am alice, wanna trade bitcoins?")
+    --unsecureSend False "i am alice, wanna trade bitcoins?"
+    return (theirLocation, nonce)
   where
     findAd = findAd' []
     findAd' excludeHashes = do
         (opreturns, newExcludes) <- findOPRETURNs excludeHashes
-        let adM = find (isAd . scriptOps) opreturns
+        let adM = foldl parseAndChoose Nothing $ map scriptOps opreturns
         case adM of
             -- If there were no ads, sleep for 30 seconds and try again
             Nothing -> threadDelay 30000000 >> findAd' newExcludes
             Just ad -> return ad
-    isAd [OP_RETURN, OP_PUSHDATA bs _] = adFinder == decodeUtf8 bs
-    isAd _ = False
+    parseAndChoose prevAd newAd = if isJust prevAd then prevAd else parseAd newAd
+    parseAd [OP_RETURN, OP_PUSHDATA bs _] = do
+        remainder <- B8.stripPrefix (encodeUtf8 adFinder) bs
+        return $ B8.splitAt onionLengthWithoutTLD remainder
+    parseAd _ = Nothing
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: IO ()
@@ -76,7 +83,7 @@ publishPairRequest = return ()
 -- Respondent: Randomly select advertiser, store encAPK(nA, nR, alphaR) to alphaA
 runRespondent :: IO Location
 runRespondent = do
-    selectAdvertiser
+    (loc, nonce) <- selectAdvertiser
     publishPairRequest
     return $ B8.pack "advertiser-location.onion"
 
@@ -84,10 +91,11 @@ runRespondent = do
 publishAd :: PrvKey -> Location -> IO ()
 publishAd prvkey loc = do
     g <- newGenIO :: IO CtrDRBG
-    let nonce = head $ crandomRs (minBound, maxBound) g :: Word64
+    let nonce = head $ crandomRs (minBound, maxBound) g :: Nonce
         addr = pubKeyAddr $ derivePubKey prvkey
+        uniqueLoc = B8.take onionLengthWithoutTLD loc
     utxos <- utxos addr
-    let tx = either undefined id $ makeAdTransaction utxos [prvkey] loc nonce tao (encodeUtf8 adFinder)
+    let tx = either undefined id $ makeAdTransaction utxos [prvkey] uniqueLoc nonce tao (encodeUtf8 adFinder)
     broadcast tx
     putStrLn "ad published!"
 
