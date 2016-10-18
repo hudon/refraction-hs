@@ -18,6 +18,9 @@ library
   exposed-modules:     Network.Refraction
                      , Network.Refraction.Blockchain
                      , Network.Refraction.Discover
+                     , Network.Refraction.Discover.Advertiser
+                     , Network.Refraction.Discover.Respondent
+                     , Network.Refraction.Discover.Types
                      , Network.Refraction.FairExchange
                      , Network.Refraction.Generator
                      , Network.Refraction.PeerToPeer
