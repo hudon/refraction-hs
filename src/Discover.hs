@@ -16,6 +16,7 @@ import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Char8 as BL8
 import Data.List (find)
 import Data.Maybe
 import Data.Serialize as S
@@ -54,9 +55,11 @@ discover chan myLoc isBob isAlice prv = flipCoin >>= pickRole
 
 selectAdvertiser :: IO (Location, Nonce)
 selectAdvertiser = do
+    putStrLn "Selecting advertiser..."
     ad@(loc, n) <- findAd
     let theirLocation = B8.concat [loc, encodeUtf8 ".onion"]
         nonce = either undefined id $ S.decode n
+    putStrLn "Found advertiser"
     return (theirLocation, nonce)
   where
     findAd = findAd' []
@@ -76,6 +79,7 @@ selectAdvertiser = do
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO ()
 publishPairRequest prvkey nonces = do
+    putStrLn "publishing pair request..."
     let addr = pubKeyAddr $ derivePubKey prvkey
     utxos <- utxos addr
     let tx = either undefined id $ makePairRequest utxos [prvkey] nonces tao (encodeUtf8 adFinder)
@@ -123,6 +127,7 @@ selectRespondent chan = putStrLn "called select respondent" >> waitForRespondent
 -- Advertiser: publishes T{A -> A, tip = tao/2, TEXT(lock = h(nR), nA)}
 publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO ()
 publishPairResponse prvkey nonces = do
+    putStrLn "publishing pair response"
     let addr = pubKeyAddr $ derivePubKey prvkey
     utxos <- utxos addr
     -- TODO use a separate generator that hashes the respondent nonce

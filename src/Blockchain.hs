@@ -8,7 +8,7 @@ module Blockchain
 
 import Control.Exception (try)
 import Control.Lens
-import Data.Aeson (FromJSON, ToJSON, toJSON)
+import Data.Aeson
 import Data.Aeson.Lens (_String, key)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
@@ -39,20 +39,22 @@ instance FromJSON TxPayload
 instance ToJSON TxPayload
 
 data ResponseBroadcast = ResponseBroadcast {
-      _transaction :: Tx
-} deriving (Generic)
+      broadcastTxid :: TxHash
+} deriving (Show)
 
-instance FromJSON ResponseBroadcast
+instance FromJSON ResponseBroadcast where
+    parseJSON (Object m) = ResponseBroadcast <$> m .: "txid"
 
 broadcast :: Tx -> IO ()
 broadcast tx = do
+    putStrLn "Broadcasting"
     let url = baseURL ++ "/tx/send"
     eresponse <- try $ post url (toJSON $ TxPayload tx)
     case eresponse of
         Left e -> print (e :: HttpException)
         Right response -> asJSON response >>= printTransaction
   where
-    printTransaction r = putStrLn . show . _transaction $ r ^. responseBody
+    printTransaction r = putStrLn . show . broadcastTxid $ r ^. responseBody
 
 transaction :: TxHash -> IO Tx
 transaction txhash = do
@@ -99,7 +101,7 @@ fetchRecentBlocks excludes = do
     let url = baseURL ++ "/status?q=getLastBlockHash"
     r <- get url
     let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
-    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 10
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 6
   where
     fetchBlockchain :: BlockHash -> [BlockHash] -> Int -> IO [Block]
     fetchBlockchain tipHash excludes depth
@@ -107,6 +109,7 @@ fetchRecentBlocks excludes = do
         | tipHash `elem` excludes = return []
         | otherwise = do
             let url = concat [baseURL, "/rawblock/", B8.unpack $ blockHashToHex tipHash]
+            putStrLn "fetching a block..."
             r <- get url
             let b = toBlock $ r ^. responseBody . key "rawblock" . _String
             prevBlocks <- fetchBlockchain (prevBlock (blockHeader b)) excludes (depth - 1)

@@ -28,7 +28,7 @@ options = [
   ]
 
 showBob opt = do
-    putStrLn "Running Refraction in debug mode as Bob (Respondent)"
+    putStrLn "Running Refraction in debug mode as Bob (Advertiser)"
     return opt { optIsBob = True }
 
 showAlice opt = do
