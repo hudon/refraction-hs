@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
-module Blockchain
+module Network.Refraction.Blockchain
     ( broadcast
     , findOPRETURNs
     , transaction
@@ -18,7 +18,6 @@ import qualified Data.Serialize as S
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Word (Word32)
-import Generator (SatoshiValue, UTXO(..))
 import GHC.Generics (Generic)
 import Network.Haskoin.Block (Block, BlockHash, blockHashToHex, blockHeader, blockTxns, headerHash, hexToBlockHash, prevBlock)
 import Network.Haskoin.Crypto (Address, addrToBase58)
@@ -26,6 +25,7 @@ import Network.Haskoin.Script (Script(..), ScriptOp(..))
 import Network.Haskoin.Transaction (hexToTxHash, OutPoint(..), scriptOutput, Tx, TxHash, txOut, TxOut(..), txHashToHex)
 import Network.Haskoin.Util (decodeHex, decodeToMaybe)
 import Network.HTTP.Client (HttpException(..))
+import Network.Refraction.Generator (SatoshiValue, UTXO(..))
 import Network.Wreq
 
 baseURL = "https://testnet.blockexplorer.com/api"

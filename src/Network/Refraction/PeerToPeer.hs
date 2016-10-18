@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PeerToPeer
+module Network.Refraction.PeerToPeer
     ( unsecureSend
     , Msg
     , sendMessage

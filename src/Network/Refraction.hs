@@ -1,27 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Refraction
+module Network.Refraction
     ( isValidPrivateKey
     , isValidAddress
     , refract
     , RefractionConfig
     ) where
 
-import Blockchain (broadcast, transaction, utxos)
 import Control.Monad (when)
 import Data.Maybe
 import Data.Text (Text, append)
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
 import Data.Yaml
-import Discover (discover)
-import FairExchange (fairExchange)
-import Generator (UTXO(..))
 import Network (PortNumber)
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
-import qualified PeerToPeer as P2P
-import Tor (makeHiddenService)
+import Network.Refraction.Blockchain (broadcast, transaction, utxos)
+import Network.Refraction.Discover (discover)
+import Network.Refraction.FairExchange (fairExchange)
+import Network.Refraction.Generator (UTXO(..))
+import qualified Network.Refraction.PeerToPeer as P2P
+import Network.Refraction.Tor (makeHiddenService)
 
 -- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
@@ -67,7 +67,7 @@ startRound :: Bool -> Bool -> C.PrvKey -> C.Address -> IO ()
 startRound isBob isAlice prv addr = do
     let port = if isBob then 4242 else 4243 :: PortNumber
     chan <- P2P.startServer port
-    Tor.makeHiddenService port $ \myLocation -> do
+    makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob isAlice prv
         fairExchange isBob isAlice chan myLocation theirLocation

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Tor
+module Network.Refraction.Tor
     ( secureConnect
     , makeHiddenService
     ) where

@@ -15,13 +15,13 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Blockchain
-                     , Discover
-                     , FairExchange
-                     , Generator
-                     , PeerToPeer
-                     , Refraction
-                     , Tor
+  exposed-modules:     Network.Refraction
+                     , Network.Refraction.Blockchain
+                     , Network.Refraction.Discover
+                     , Network.Refraction.FairExchange
+                     , Network.Refraction.Generator
+                     , Network.Refraction.PeerToPeer
+                     , Network.Refraction.Tor
 -- TODO: restrict these deps to safer ranges
   build-depends:       aeson
                      , base >= 4.7 && < 5

@@ -3,12 +3,11 @@
   Discovery is the first step of Xim and allows peers to find eachother. This step
   adds Sybil attack resistance to the mixing
 -}
-module Discover
+module Network.Refraction.Discover
     ( discover
     , Location
     ) where
 
-import Blockchain (broadcast, findOPRETURNs, utxos)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Chan (Chan, readChan)
 import Control.Monad.CryptoRandom (crandomRs)
@@ -22,14 +21,15 @@ import Data.Maybe
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Data.Word
-import Generator (makeAdTransaction, makePairRequest, SatoshiValue)
 import Network.Haskoin.Block (BlockHash)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
 import Network.Haskoin.Transaction (scriptOutput, Tx, txOut)
-import PeerToPeer (Msg, sendMessage, unsecureSend)
+import Network.Refraction.Blockchain (broadcast, findOPRETURNs, utxos)
+import Network.Refraction.Generator (makeAdTransaction, makePairRequest, SatoshiValue)
+import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
+import Network.Refraction.Tor(secureConnect)
 import System.Random (getStdRandom, randomR)
-import Tor(secureConnect)
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
 -- Advertise fee

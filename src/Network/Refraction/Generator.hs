@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Generator
+module Network.Refraction.Generator
     ( makeSimpleTransaction
     , makeAdTransaction
     , makeAliceClaim

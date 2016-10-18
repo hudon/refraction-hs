@@ -10,7 +10,7 @@ import Data.Maybe (fromMaybe)
 import Data.Yaml
 import Data.Text (Text)
 import qualified Data.Text.IO as T
-import qualified Refraction as R
+import qualified Network.Refraction as R
 
 configFilename = ".refraction.yaml"
 

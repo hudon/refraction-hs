@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-module FairExchange
+module Network.Refraction.FairExchange
     ( fairExchange
     ) where
 
@@ -16,10 +16,10 @@ import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8, encodeUtf8)
 import qualified Data.Serialize as S
 import Data.Word
-import Discover (Location)
+import Network.Refraction.Discover (Location)
+import Network.Refraction.PeerToPeer (Msg, unsecureSend)
 import GHC.Generics
 import Network.Haskoin.Crypto (derivePubKey, doubleHash256, getEntropy, genPrvKey, Hash256, PrvKey, PubKey, withSource)
-import PeerToPeer (Msg, unsecureSend)
 
 type KeyPair = (PrvKey, PubKey)
 type Secret = Integer
