@@ -7,6 +7,7 @@ import Control.Concurrent (threadDelay)
 import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -18,8 +19,9 @@ import Network.Refraction.Generator (makePairRequest, SatoshiValue)
 import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
 import Network.Refraction.Tor(secureConnect)
 
-runRespondent :: PrvKey -> IO Location
-runRespondent prvkey = do
+runRespondent :: PrvKey -> Location -> IO Location
+runRespondent prvkey myLoc = do
+    putStrLn "Running respondent..."
     (adLoc, aNonce) <- selectAdvertiser
 
     g <- newGenIO :: IO CtrDRBG
@@ -27,11 +29,12 @@ runRespondent prvkey = do
     -- TODO: we can't use Tor until we have the ad transaction on the blockchain
     -- stuff working because the locations are dynamic. Use direct connection for now.
     -- TODO: figure out if we should use lazy or strict... or at least fix this inefficiency
-    secureConnect adLoc (sendMessage $ S.encodeLazy rNonce)
+    let msg = BL.concat [S.encodeLazy rNonce, S.encodeLazy myLoc]
+    secureConnect adLoc (sendMessage msg)
     --unsecureSend False "i am alice, wanna trade bitcoins?"
     --
     publishPairRequest prvkey (aNonce, rNonce)
-    return $ B8.pack "advertiser-location.onion"
+    return adLoc
 
 selectAdvertiser :: IO (Location, Nonce)
 selectAdvertiser = do
@@ -59,10 +62,10 @@ selectAdvertiser = do
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
 publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO ()
 publishPairRequest prvkey nonces = do
-    putStrLn "publishing pair request..."
+    putStrLn "Publishing pair request..."
     let addr = pubKeyAddr $ derivePubKey prvkey
     utxos <- utxos addr
     let tx = either undefined id $ makePairRequest utxos [prvkey] nonces tao (encodeUtf8 adFinder)
     broadcast tx
-    putStrLn "pair request published!"
+    putStrLn "Pair request published!"
 
