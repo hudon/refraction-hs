@@ -13,7 +13,7 @@ import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
-import Network.Refraction.Blockchain (broadcast, findOPRETURNs, utxos)
+import Network.Refraction.Blockchain (broadcastTx, findOPRETURNs, fetchUTXOs)
 import Network.Refraction.Discover.Types
 import Network.Refraction.Generator (makePairRequest, SatoshiValue)
 import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
@@ -64,8 +64,8 @@ publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO ()
 publishPairRequest prvkey nonces = do
     putStrLn "Publishing pair request..."
     let addr = pubKeyAddr $ derivePubKey prvkey
-    utxos <- utxos addr
+    utxos <- fetchUTXOs addr
     let tx = either undefined id $ makePairRequest utxos [prvkey] nonces tao (encodeUtf8 adFinder)
-    broadcast tx
+    broadcastTx tx
     putStrLn "Pair request published!"
 

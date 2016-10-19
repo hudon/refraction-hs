@@ -13,7 +13,7 @@ import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 
-import Network.Refraction.Blockchain (broadcast, utxos)
+import Network.Refraction.Blockchain (broadcastTx, fetchUTXOs)
 import Network.Refraction.PeerToPeer (Msg)
 import Network.Refraction.Discover.Types
 import Network.Refraction.Generator (makeAdTransaction, makePairRequest, SatoshiValue)
@@ -33,9 +33,9 @@ publishAd prvkey loc nonce = do
     putStrLn "Publish ad..."
     let addr = pubKeyAddr $ derivePubKey prvkey
         uniqueLoc = B8.take onionLengthWithoutTLD loc
-    utxos <- utxos addr
+    utxos <- fetchUTXOs addr
     let tx = either undefined id $ makeAdTransaction utxos [prvkey] uniqueLoc nonce tao (encodeUtf8 adFinder)
-    broadcast tx
+    broadcastTx tx
     putStrLn "Ad published!"
 
 selectRespondent :: Chan Msg -> IO (Nonce, Location)
@@ -58,10 +58,10 @@ publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO ()
 publishPairResponse prvkey nonces = do
     putStrLn "Publishing pair response"
     let addr = pubKeyAddr $ derivePubKey prvkey
-    utxos <- utxos addr
+    utxos <- fetchUTXOs addr
     -- TODO use a separate generator that hashes the respondent nonce
     let tx = either undefined id $ makePairRequest utxos [prvkey] nonces tao (encodeUtf8 adFinder)
-    broadcast tx
+    broadcastTx tx
     putStrLn "Pair response published!"
 
 

@@ -16,7 +16,6 @@ import Network (PortNumber)
 import Network.Haskoin.Constants (switchToTestnet3)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
-import Network.Refraction.Blockchain (broadcast, transaction, utxos)
 import Network.Refraction.Discover (discover)
 import Network.Refraction.FairExchange (fairExchange)
 import Network.Refraction.Generator (UTXO(..))
@@ -55,14 +54,6 @@ isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
 handleBadAddress :: Text -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-testBlockchain = do
-    res@(x:xs) <- utxos "n3mWPA55iib5xp4dGQusuHozAzWHgDZ4U5"
-    --putStrLn $ show res
-    let UTXO txout outpoint = x
-    let OutPoint txhash index = outpoint
-    tx <- transaction txhash
-    broadcast tx
-
 startRound :: Bool -> Bool -> C.PrvKey -> C.Address -> IO ()
 startRound isBob isAlice prv addr = do
     let port = if isBob then 4242 else 4243 :: PortNumber
@@ -70,14 +61,14 @@ startRound isBob isAlice prv addr = do
     makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
         theirLocation <- discover chan myLocation isBob isAlice prv
-        fairExchange isBob isAlice chan myLocation theirLocation
+        putStrLn "discover done!"
+        --fairExchange isBob isAlice chan myLocation theirLocation
 
 refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob isAlice ignoreValidation prv addr = do
     let btcNetwork = network . bitcoin $ config
     TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
     when (btcNetwork == "testnet3") switchToTestnet3
-    --testBlockchain
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress addr) -> handleBadAddress addr

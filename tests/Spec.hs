@@ -1,10 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Test.Tasty
-import Test.Tasty.SmallCheck as SC
 import Test.Tasty.QuickCheck as QC
-import Test.Tasty.HUnit
 
-import qualified Refraction as R
+import qualified Network.Refraction as R
 
 main = defaultMain tests
 
@@ -12,9 +10,8 @@ tests :: TestTree
 tests = testGroup "Tests" [properties, unitTests]
 
 properties :: TestTree
-properties = testGroup "Properties" [scProps, qcProps]
+properties = testGroup "Properties" [qcProps]
 
-scProps = testGroup "(checked by SmallCheck)" []
 qcProps = testGroup "(checked by QuickCheck)" []
 
 unitTests = testGroup "Unit tests"

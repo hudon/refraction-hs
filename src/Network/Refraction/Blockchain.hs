@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 module Network.Refraction.Blockchain
-    ( broadcast
+    ( broadcastTx
     , findOPRETURNs
-    , transaction
-    , utxos
+    , fetchTx
+    , fetchUTXOs
     ) where
 
 import Control.Exception (try)
@@ -45,8 +45,8 @@ data ResponseBroadcast = ResponseBroadcast {
 instance FromJSON ResponseBroadcast where
     parseJSON (Object m) = ResponseBroadcast <$> m .: "txid"
 
-broadcast :: Tx -> IO ()
-broadcast tx = do
+broadcastTx :: Tx -> IO ()
+broadcastTx tx = do
     putStrLn "Broadcasting"
     let url = baseURL ++ "/tx/send"
     eresponse <- try $ post url (toJSON $ TxPayload tx)
@@ -56,8 +56,8 @@ broadcast tx = do
   where
     printTransaction r = putStrLn . show . broadcastTxid $ r ^. responseBody
 
-transaction :: TxHash -> IO Tx
-transaction txhash = do
+fetchTx :: TxHash -> IO Tx
+fetchTx txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
     r <- asJSON =<< get url
     return . rawtx $ r ^. responseBody
@@ -77,8 +77,8 @@ toUTXO r = UTXO txOut outPoint
     txOut = TxOut (satoshis r) (fromMaybe undefined . decodeHex . encodeUtf8 . scriptPubKey $ r)
     outPoint = OutPoint (txid r)  (vout r)
 
-utxos :: Address -> IO [UTXO]
-utxos addr = do
+fetchUTXOs :: Address -> IO [UTXO]
+fetchUTXOs addr = do
     let url = baseURL ++ "/addr/" ++ B8.unpack (addrToBase58 addr) ++ "/utxo"
     r <- asJSON =<< get url
     return . map toUTXO $ r ^. responseBody
