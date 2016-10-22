@@ -22,7 +22,7 @@ spec = do
             length (txOut prepareAdTx) `shouldBe` 2
 
 
--- same prvkey as in demo-fairexchaneg.hs but on mainnet
+-- same prvkey as in demo-fairexchange.hs but on mainnet
 advertiserPrvKey = read "PrvKey \"KzVhFsdDKRsLQPBu7Fkhm4S2fP5muXMLkikPfcRa8Kn72QTDuTDH\""
 
 advertiserAddress = pubKeyAddr $ derivePubKey advertiserPrvKey
