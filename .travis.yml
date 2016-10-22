@@ -1,6 +1,6 @@
 # see https://docs.haskellstack.org/en/stable/travis_ci/
-
-ghc: 8.0.1
+#
+language: haskell
 
 sudo: false
 
