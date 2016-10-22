@@ -1,5 +1,7 @@
 # Refraction
 
+[![Build Status](https://travis-ci.org/hudon/refraction-hs.svg?branch=hudon-travis)](https://travis-ci.org/hudon/refraction-hs)
+
 ## Decentralized Bitcoin Mixing Service
 
 Refraction is an application that allows you to have complete financial privacy with your Bitcoin. It is decentralized and peer-to-peer. All it relies on is the Bitcoin network and the users running Refraction. It is resistant to Sybil and timing attacks, with configurable parameters to opt for more or less security depending on your time constraints.
