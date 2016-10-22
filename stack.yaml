@@ -3,7 +3,7 @@ extra-package-dbs: []
 packages:
 - '.'
 - location:
-    git: git@github.com:haskoin/haskoin
+    git: https://github.com/haskoin/haskoin.git
     commit: 3f2b04cc735f5fb78a9338031d6bf7e86bd4de7c
   subdirs:
   - haskoin-core

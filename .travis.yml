@@ -1,0 +1,32 @@
+# see https://docs.haskellstack.org/en/stable/travis_ci/
+#
+
+# Enable containerization to enable caching
+sudo: false
+
+# Choose a lightweight base image; we provide our own build tools.
+language: c
+
+# Caching so the next build will be fast too.
+cache:
+  directories:
+  - $HOME/.ghc
+  - $HOME/.cabal
+  - $HOME/.stack
+
+before_install:
+# Download and unpack the stack executable
+- mkdir -p ~/.local/bin
+- export PATH=$HOME/.local/bin:$PATH
+- travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+
+addons:
+  apt:
+    packages:
+    - libgmp3-dev
+
+install:
+  - stack setup
+
+script:
+  - stack --no-terminal --skip-ghc-check test
