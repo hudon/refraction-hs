@@ -14,9 +14,14 @@ spec :: Spec
 spec = do
     describe "mkInput" $ do
         it "returns Left if non-decodable" $ do
+            let txout = TxOut preAdValue $ S.encode "foo" -- bad output script
+                badUTXO = G.UTXO txout undefined
             G.mkInput badUTXO `shouldSatisfy` isLeft
     describe "makeAdTransaction" $ do
         it "returns change to signatory" $ do
+            let isReturnedChange = isChange . decodeOutputBS . scriptOutput
+                isChange (Right (PayPKHash addr)) = addr == advertiserAddress
+                isChange _ = False
             any isReturnedChange (txOut prepareAdTx) `shouldBe` True
         it "has 2 outputs" $ do
             length (txOut prepareAdTx) `shouldBe` 2
@@ -35,16 +40,6 @@ preAdUTXO =
     in G.UTXO txout op
 
 adFee = 10000000 :: G.SatoshiValue -- 0.1 btc
-
-badUTXO =
-    let txout = TxOut preAdValue $ S.encode "foo"
-    in G.UTXO txout undefined
-
-isReturnedChange :: TxOut -> Bool
-isReturnedChange = isChange . decodeOutputBS . scriptOutput
-  where
-    isChange (Right (PayPKHash addr)) = addr == advertiserAddress
-    isChange _ = False
 
 prepareAdTx :: Tx
 prepareAdTx =
