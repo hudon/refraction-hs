@@ -7,6 +7,7 @@ module Network.Refraction.Generator
     , makeBobClaim
     , makeBobCommit
     , makePairRequest
+    , mkInput -- TODO do not export this once we're testing the higher level functions
     , SatoshiValue
     , UTXO(..)
     ) where
@@ -34,9 +35,10 @@ instance Coin UTXO where
 dTxFee = 10000
 
 -- |Takes a UTXO and returns a SigInput that can be used to sign a Tx
-mkInput :: UTXO -> SigInput
-mkInput utxo = SigInput pso (_outPoint utxo) (SigAll False) Nothing
-  where pso = either undefined id . decodeOutputBS . scriptOutput $ _txOut utxo
+mkInput :: UTXO -> Either String SigInput
+mkInput utxo = do
+    pso <- decodeOutputBS . scriptOutput $ _txOut utxo
+    return $ SigInput pso (_outPoint utxo) (SigAll False) Nothing
 
 -- |Our miner fee grows linearly with the number of inputs
 calculateAmount :: [UTXO] -> SatoshiValue
@@ -46,9 +48,10 @@ calculateAmount = foldl sumVal 0
 
 -- |Takes a list of utxos and associated private keys and pays to an address
 makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
-makeSimpleTransaction utxos prvkeys addr =
+makeSimpleTransaction utxos prvkeys addr = do
     let tx = either undefined id $ buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
-    in signTx tx (map mkInput utxos) prvkeys
+    ins <- mapM mkInput utxos
+    signTx tx ins prvkeys
 
 -- We reverse the hashes here because the redeem script will expect the secrets in reverse order
 makeAliceCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String (Tx, Script)
@@ -93,10 +96,11 @@ scriptAddrNonStd :: Script -> Address
 scriptAddrNonStd = ScriptAddress . hash160 . getHash256 . hash256 . S.encode
 
 signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String Tx
-signP2SH utxos prvkeys redeemScript =
+signP2SH utxos prvkeys redeemScript = do
     let scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
         tx = either undefined id $ buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
-    in signTx tx (map mkInput utxos) prvkeys
+    ins <- mapM mkInput utxos
+    signTx tx ins  prvkeys
 
 makeAliceCommitRedeem :: PubKey -> PubKey -> [Hash256] -> Integer -> Script
 makeAliceCommitRedeem aPubkey bPubkey sumHashes locktime =
@@ -139,7 +143,8 @@ makeAdTransaction :: [UTXO] -- ^ The outputs to spend
 makeAdTransaction utxos prvkeys loc nonce adFee ref = do
     let ad = B.concat [ref, loc, S.encode nonce]
         tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
-    signTx tx (map mkInput utxos) prvkeys
+    ins <- mapM mkInput utxos
+    signTx tx ins prvkeys
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
 makePairRequest :: [UTXO] -- ^ The outputs to spend
@@ -151,4 +156,5 @@ makePairRequest :: [UTXO] -- ^ The outputs to spend
 makePairRequest utxos prvkeys (aNonce, rNonce) adFee ref = do
     let ad = B.concat [ref, S.encode aNonce, S.encode rNonce]
         tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
-    signTx tx (map mkInput utxos) prvkeys
+    ins <- mapM mkInput utxos
+    signTx tx ins prvkeys
