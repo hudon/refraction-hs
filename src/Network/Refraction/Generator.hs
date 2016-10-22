@@ -150,13 +150,15 @@ makeAdTransaction utxos prvkey loc nonce adFee ref = do
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
 makePairRequest :: [UTXO] -- ^ The outputs to spend
-                -> [PrvKey] -- ^ the keys to sign with
+                -> PrvKey -- ^ the key to sign with
                 -> (Word64, Word64) -- ^ the nonce pair to encode
                 -> SatoshiValue -- ^ the ad fee
                 -> B.ByteString -- ^ the Refraction identifier
                 -> Either String Tx
-makePairRequest utxos prvkeys (aNonce, rNonce) adFee ref = do
+makePairRequest utxos prvkey (aNonce, rNonce) adFee ref = do
     let ad = B.concat [ref, S.encode aNonce, S.encode rNonce]
-        tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
+        tx = either undefined id $ buildTx (map _outPoint utxos) [
+            (DataCarrier ad, 0),
+            (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
-    signTx tx ins prvkeys
+    signTx tx ins [prvkey]
