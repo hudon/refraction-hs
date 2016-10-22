@@ -134,17 +134,19 @@ makeBobCommitRedeem aPubkey bPubkey bHashes locktime =
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
 makeAdTransaction :: [UTXO] -- ^ The outputs to spend
-                  -> [PrvKey] -- ^ the keys to sign with
+                  -> PrvKey -- ^ the key to sign with
                   -> B.ByteString -- ^ the location to encode in the ad
                   -> Word64 -- ^ the ad nonce to encode
                   -> SatoshiValue -- ^ the ad fee
                   -> B.ByteString -- ^ the Refraction identifier
                   -> Either String Tx
-makeAdTransaction utxos prvkeys loc nonce adFee ref = do
+makeAdTransaction utxos prvkey loc nonce adFee ref = do
     let ad = B.concat [ref, loc, S.encode nonce]
-        tx = either undefined id $ buildTx (map _outPoint utxos) [(DataCarrier ad, calculateAmount utxos)]
+        tx = either undefined id $ buildTx (map _outPoint utxos) [
+            (DataCarrier ad, 0),
+            (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
-    signTx tx ins prvkeys
+    signTx tx ins [prvkey]
 
 -- |Takes coins to sign, the data to place in the OP_RETURN and the miner's fee value
 makePairRequest :: [UTXO] -- ^ The outputs to spend
