@@ -59,6 +59,8 @@ publishPairResponse prvkey nonces = do
     putStrLn "Publishing pair response"
     let addr = pubKeyAddr $ derivePubKey prvkey
     utxos <- fetchUTXOs addr
+    putStrLn "gathering utxos..."
+    putStrLn $ show $ length utxos
     -- TODO use a separate generator that hashes the respondent nonce
     let tx = either undefined id $ makePairRequest utxos prvkey nonces tao (encodeUtf8 adFinder)
     broadcastTx tx

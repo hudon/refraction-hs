@@ -22,6 +22,9 @@ library
                      , Network.Refraction.Discover.Respondent
                      , Network.Refraction.Discover.Types
                      , Network.Refraction.FairExchange
+                     , Network.Refraction.FairExchange.Alice
+                     , Network.Refraction.FairExchange.Bob
+                     , Network.Refraction.FairExchange.Types
                      , Network.Refraction.Generator
                      , Network.Refraction.PeerToPeer
                      , Network.Refraction.Tor
@@ -63,6 +66,8 @@ test-suite refraction-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             Spec.hs
+  other-modules:       Network.RefractionSpec
+                     , Network.Refraction.GeneratorSpec
   build-depends:       base
                      , cereal
                      , haskoin-core

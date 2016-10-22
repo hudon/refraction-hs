@@ -101,7 +101,7 @@ fetchRecentBlocks excludes = do
     let url = baseURL ++ "/status?q=getLastBlockHash"
     r <- get url
     let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
-    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 6
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 3
   where
     fetchBlockchain :: BlockHash -> [BlockHash] -> Int -> IO [Block]
     fetchBlockchain tipHash excludes depth
