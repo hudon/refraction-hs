@@ -9,7 +9,7 @@ import Test.Hspec
 
 spec :: Spec
 spec = do
-    describe "Generator.mkInput" $ do
+    describe "mkInput" $ do
         it "returns Left if non-decodable" $ do
             let txout = TxOut 5 (S.encode "foo")
                 utxo = G.UTXO txout undefined
