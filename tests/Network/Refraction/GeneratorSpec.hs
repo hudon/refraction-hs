@@ -25,6 +25,14 @@ spec = do
             any isReturnedChange (txOut prepareAdTx) `shouldBe` True
         it "has 2 outputs" $ do
             length (txOut prepareAdTx) `shouldBe` 2
+    describe "makePairRequest" $ do
+        it "returns change to signatory" $ do
+            let isReturnedChange = isChange . decodeOutputBS . scriptOutput
+                isChange (Right (PayPKHash addr)) = addr == advertiserAddress
+                isChange _ = False
+            any isReturnedChange (txOut preparePairRequest) `shouldBe` True
+        it "has 2 outputs" $ do
+            length (txOut preparePairRequest) `shouldBe` 2
 
 
 -- same prvkey as in demo-fairexchange.hs but on mainnet
@@ -49,4 +57,14 @@ prepareAdTx =
         adFee = adFee
         ref = S.encode "baz"
         Right tx = G.makeAdTransaction utxos advertiserPrvKey loc nonce adFee ref
+    in tx
+
+preparePairRequest :: Tx
+preparePairRequest =
+    let utxos = [preAdUTXO]
+        loc = S.encode "foo"
+        nonce = 23498 :: Word64
+        adFee = adFee
+        ref = S.encode "baz"
+        Right tx = G.makePairRequest utxos advertiserPrvKey (nonce, nonce) adFee ref
     in tx
