@@ -34,7 +34,7 @@ publishAd prvkey loc nonce = do
     let addr = pubKeyAddr $ derivePubKey prvkey
         uniqueLoc = B8.take onionLengthWithoutTLD loc
     utxos <- fetchUTXOs addr
-    let tx = either undefined id $ makeAdTransaction utxos [prvkey] uniqueLoc nonce tao (encodeUtf8 adFinder)
+    let tx = either undefined id $ makeAdTransaction utxos prvkey uniqueLoc nonce tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Ad published!"
 

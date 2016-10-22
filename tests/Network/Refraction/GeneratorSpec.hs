@@ -2,6 +2,9 @@ module Network.Refraction.GeneratorSpec (spec) where
 
 import Data.Either
 import qualified Data.Serialize as S
+import Data.Word
+import Network.Haskoin.Constants
+import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
 import qualified Network.Refraction.Generator as G
@@ -11,6 +14,44 @@ spec :: Spec
 spec = do
     describe "mkInput" $ do
         it "returns Left if non-decodable" $ do
-            let txout = TxOut 5 (S.encode "foo")
-                utxo = G.UTXO txout undefined
-            G.mkInput utxo `shouldSatisfy` isLeft
+            G.mkInput badUTXO `shouldSatisfy` isLeft
+    describe "makeAdTransaction" $ do
+        it "returns change to signatory" $ do
+            any isReturnedChange (txOut prepareAdTx) `shouldBe` True
+        it "has 2 outputs" $ do
+            length (txOut prepareAdTx) `shouldBe` 2
+
+
+-- same prvkey as in demo-fairexchaneg.hs but on mainnet
+advertiserPrvKey = read "PrvKey \"KzVhFsdDKRsLQPBu7Fkhm4S2fP5muXMLkikPfcRa8Kn72QTDuTDH\""
+
+advertiserAddress = pubKeyAddr $ derivePubKey advertiserPrvKey
+
+preAdValue = 100000000 :: G.SatoshiValue -- 1 btc
+preAdTxHash = read "TxHash \"aa89f9878323075e109efcbd44c7804db4bea9c85910d002d888b9fa70087570\""
+preAdUTXO =
+    let txout = TxOut preAdValue $ encodeOutputBS $ PayPKHash advertiserAddress
+        op = OutPoint preAdTxHash 1
+    in G.UTXO txout op
+
+adFee = 10000000 :: G.SatoshiValue -- 0.1 btc
+
+badUTXO =
+    let txout = TxOut preAdValue $ S.encode "foo"
+    in G.UTXO txout undefined
+
+isReturnedChange :: TxOut -> Bool
+isReturnedChange = isChange . decodeOutputBS . scriptOutput
+  where
+    isChange (Right (PayPKHash addr)) = addr == advertiserAddress
+    isChange _ = False
+
+prepareAdTx :: Tx
+prepareAdTx =
+    let utxos = [preAdUTXO]
+        loc = S.encode "foo"
+        nonce = 23498 :: Word64
+        adFee = adFee
+        ref = S.encode "baz"
+        Right tx = G.makeAdTransaction utxos advertiserPrvKey loc nonce adFee ref
+    in tx
