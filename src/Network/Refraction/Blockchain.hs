@@ -3,6 +3,7 @@ module Network.Refraction.Blockchain
     ( broadcastTx
     , findOPRETURNs
     , fetchTx
+    , fetchSpentTxId
     , fetchUTXOs
     ) where
 
@@ -10,6 +11,7 @@ import Control.Exception (try)
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.Lens (_String, key)
+import Data.Aeson.Types
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import Data.List (union)
@@ -61,6 +63,15 @@ fetchTx txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
     r <- asJSON =<< get url
     return . rawtx $ r ^. responseBody
+
+fetchSpentTxId :: TxHash -> Int -> IO (Maybe TxHash)
+fetchSpentTxId txhash index = do
+    let url = baseURL ++ "/tx/" ++ B8.unpack (txHashToHex txhash)
+    r <- asJSON =<< get url
+    let result = r ^. responseBody
+    let spentTxId = flip parseMaybe result $ \obj -> do outs <- obj .: "vout"
+                                                        (outs !! index) .: "spentTxId"
+    return $ maybe Nothing (hexToTxHash . encodeUtf8) spentTxId
 
 data ResponseUTXO = ResponseUTXO {
       txid :: TxHash

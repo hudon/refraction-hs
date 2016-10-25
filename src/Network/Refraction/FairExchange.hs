@@ -26,7 +26,8 @@ fairExchange isBob isAlice prv chan _ theirLocation = do
     refundKeypair <- makeKeyPair
     mySecrets <- genSecrets numSecrets
     let run = if isBob then runBob else runAlice
-    run chan (prv, derivePubKey prv) refundKeypair mySecrets theirLocation
+        lastTx = undefined
+    run chan (prv, derivePubKey prv) refundKeypair lastTx mySecrets theirLocation
   where
     genKey = withSource getEntropy genPrvKey
     makeKeyPair = genKey >>= \p -> return (p, derivePubKey p)
