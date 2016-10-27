@@ -47,16 +47,21 @@ data ResponseBroadcast = ResponseBroadcast {
 instance FromJSON ResponseBroadcast where
     parseJSON (Object m) = ResponseBroadcast <$> m .: "txid"
 
-broadcastTx :: Tx -> IO TxHash
+broadcastTx :: Tx -> IO (Maybe TxHash)
 broadcastTx tx = do
     putStrLn "Broadcasting"
+    print tx
     let url = baseURL ++ "/tx/send"
     eresponse <- try $ post url (toJSON $ TxPayload tx)
     case eresponse of
-        Left e -> print (e :: HttpException)
-        Right response -> asJSON response >>= printTransaction
+        Left e -> print (e :: HttpException) >> return Nothing
+        Right r -> processResponse r
   where
-    printTransaction r = putStrLn . show . broadcastTxid $ r ^. responseBody
+    processResponse r = do
+        rjson <- asJSON r
+        let txid = broadcastTxid $ rjson ^. responseBody
+        print txid
+        return $ Just txid
 
 fetchTx :: TxHash -> IO Tx
 fetchTx txhash = do

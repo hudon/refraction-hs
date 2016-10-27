@@ -88,6 +88,7 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
     bobVerification <- readChan chan
     broadcastTx tx
     putStrLn "Sending commit hash to bob..."
+    print $ txHash tx
     send theirLocation $ S.encodeLazy $ txHash tx
     putStrLn "Alice committed!"
     return (bCommit, bCommitRedeem)

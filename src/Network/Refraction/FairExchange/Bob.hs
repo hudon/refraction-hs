@@ -51,8 +51,6 @@ setupBobSecrets chan (_, bPub) (_, refundPub) mySecrets theirLocation = do
     send theirLocation . A.encode $ BobKeyMessage bPub refundPub bobHashes sumHashes
     indices <- liftM (fromMaybe undefined . A.decode) $ readChan chan
     -- TODO(hudon) we need to remove these secrets from the ones that will be used for committing
-    putStrLn $ show indices
-    putStrLn $ show $ length mySecrets
     send theirLocation . A.encode $ map ((!!) mySecrets) indices
     putStrLn "Bob done setting up secrets!"
     return (aKey1 aliceKeys, aKey2 aliceKeys, bobHashes, sums)
@@ -79,6 +77,7 @@ bobCommit chan (prv, pub) aPub bHashes lastTx theirLocation = do
     --verifyRedeem aCommitRedeem
     send theirLocation $ S.encodeLazy "ok"
     aCommitHash <- liftM (either undefined id . S.decodeLazy) $ readChan chan
+    -- TODO (hudon) the transaction might not be fetchable yet (has to be relayed)
     aCommit <- fetchTx aCommitHash
     putStrLn "Bob committed!"
     return (aCommit, aCommitRedeem)
