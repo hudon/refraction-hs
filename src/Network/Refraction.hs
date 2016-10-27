@@ -60,9 +60,9 @@ startRound isBob isAlice prv addr = do
     chan <- P2P.startServer port
     makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
-        theirLocation <- discover chan myLocation isBob isAlice prv
+        (theirLocation, lastTx) <- discover chan myLocation isBob isAlice prv
         putStrLn "discover done!"
-        fairExchange isBob isAlice prv chan myLocation theirLocation
+        fairExchange isBob isAlice prv chan lastTx myLocation theirLocation
 
 refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> IO ()
 refract config isBob isAlice ignoreValidation prv addr = do

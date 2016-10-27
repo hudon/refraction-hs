@@ -42,6 +42,7 @@ setupBobSecrets :: Chan Msg
                 -> Location
                 -> IO (PubKey, PubKey, [Text], [Integer])
 setupBobSecrets chan (_, bPub) (_, refundPub) mySecrets theirLocation = do
+    putStrLn "Bob setting up secrets..."
     aliceKeys <- liftM (fromMaybe undefined . A.decode) $ readChan chan
     let aliceSecrets = aSecrets aliceKeys
         bobHashes = map hashAndEncode mySecrets
@@ -49,7 +50,11 @@ setupBobSecrets chan (_, bPub) (_, refundPub) mySecrets theirLocation = do
         sumHashes = map hashAndEncode sums
     send theirLocation . A.encode $ BobKeyMessage bPub refundPub bobHashes sumHashes
     indices <- liftM (fromMaybe undefined . A.decode) $ readChan chan
+    -- TODO(hudon) we need to remove these secrets from the ones that will be used for committing
+    putStrLn $ show indices
+    putStrLn $ show $ length mySecrets
     send theirLocation . A.encode $ map ((!!) mySecrets) indices
+    putStrLn "Bob done setting up secrets!"
     return (aKey1 aliceKeys, aKey2 aliceKeys, bobHashes, sums)
   where
     hashAndEncode = bsToHexText . S.encodeLazy . doubleHash256 . S.encode
@@ -59,28 +64,33 @@ bsToHexText = decodeUtf8 . B16.encode
 
 bobCommit :: Chan Msg -> KeyPair -> PubKey -> [Text] -> Tx -> Location -> IO (Tx, Script)
 bobCommit chan (prv, pub) aPub bHashes lastTx theirLocation = do
+    putStrLn "Bob is committing..."
     let utxo = makeUTXO lastTx 1
     -- TODO(hudon) don't do this partial pattern...
     let bHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . BL.toStrict .  encodeUtf8) bHashes
     let Right (tx, bCommitRedeem) = makeBobCommit [utxo] [prv] aPub pub bHashes256
     send theirLocation $ S.encodeLazy bCommitRedeem
     aliceVerification <- readChan chan
-    bCommitHash <- broadcastTx tx
-    send theirLocation $ S.encodeLazy bCommitHash
+    broadcastTx tx
+    putStrLn "Sending commit hash to alice..."
+    send theirLocation $ S.encodeLazy $ txHash tx
     -- alice's commit:
-    aCommitRedeem <- readChan chan
+    aCommitRedeem <- liftM (either undefined id . S.decodeLazy) $ readChan chan
     --verifyRedeem aCommitRedeem
     send theirLocation $ S.encodeLazy "ok"
     aCommitHash <- liftM (either undefined id . S.decodeLazy) $ readChan chan
     aCommit <- fetchTx aCommitHash
-    return (aCommit, either undefined id $ S.decodeLazy aCommitRedeem)
+    putStrLn "Bob committed!"
+    return (aCommit, aCommitRedeem)
 
 bobClaim :: KeyPair -> Tx -> Script -> [Integer] -> IO ()
 bobClaim (prv, pub) aCommit aCommitRedeem sums = do
+    putStrLn "Bob is claiming..."
     let utxo = makeUTXO aCommit 0
     -- TODO don't make these arguments lists
     let Right tx = makeBobClaim [utxo] [prv] aCommitRedeem sums pub
     broadcastTx tx
+    putStrLn "Bob claimed!"
 
 verifyRedeem :: a -> Bool
 verifyRedeem = const True

@@ -41,12 +41,14 @@ setupAliceSecrets :: Chan Msg
                   -> Location
                   -> IO (PubKey, PubKey, [Text])
 setupAliceSecrets chan (_, aPub) (_, refundPub) mySecrets theirLocation = do
+    putStrLn "Alice setting up secrets..."
     send theirLocation . A.encode $ AliceKeysMessage aPub refundPub mySecrets
     bobKeys <- liftM (fromMaybe undefined . A.decode) $ readChan chan
-    indices <- liftM (take numChallenges) $ shuffle [1..numSecrets]
+    indices <- liftM (take numChallenges) $ shuffle [0..numSecrets - 1]
     send theirLocation . A.encode $ indices
     bobSecrets <- liftM decodeSecrets (readChan chan)
     verifySecrets bobSecrets mySecrets (map decodeHashes $ bHashes bobKeys) (map decodeHashes $ bSumHashes bobKeys)
+    putStrLn "Alice done setting up secrets!"
     return (bKey1 bobKeys, bKey2 bobKeys, bSumHashes bobKeys)
   where
     decodeHashes = either undefined id . S.decodeLazy . hexTextToBs
@@ -71,7 +73,8 @@ hexTextToBs = fromMaybe undefined . decodeHex . encodeUtf8
 
 aliceCommit :: Chan Msg -> KeyPair -> PubKey -> [Text] -> Tx -> Location -> IO (Tx, Script)
 aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
-    bCommitRedeem <- readChan chan
+    putStrLn "Alice is committing..."
+    bCommitRedeem <- liftM (either undefined id . S.decodeLazy) $ readChan chan
     --verifyRedeem bCommitRedeem
     send theirLocation $ S.encodeLazy "ok"
     bCommitHash <- liftM (either undefined id . S.decodeLazy) $ readChan chan
@@ -83,18 +86,22 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
     let Right (tx, aCommitRedeem) = makeAliceCommit [utxo] [prv] bPub pub sumHashes256
     send theirLocation $ S.encodeLazy aCommitRedeem
     bobVerification <- readChan chan
-    aCommitHash <- broadcastTx tx
-    send theirLocation $ S.encodeLazy aCommitHash
-    return (bCommit, either undefined id $ S.decodeLazy bCommitRedeem)
+    broadcastTx tx
+    putStrLn "Sending commit hash to bob..."
+    send theirLocation $ S.encodeLazy $ txHash tx
+    putStrLn "Alice committed!"
+    return (bCommit, bCommitRedeem)
 
 aliceClaim :: KeyPair -> Tx -> Script -> [Integer] -> IO ()
 aliceClaim (prv, pub) bCommit bCommitRedeem aSecrets = do
+    putStrLn "Alice is claiming..."
     bClaim <- waitForBobClaim bCommit
     -- TODO(hudon) expand pattern we're matching on to catch errors
     let Right bSecret = getBSecret bClaim aSecrets
         utxo = makeUTXO bCommit 0
         Right tx = makeAliceClaim [utxo] [prv] bCommitRedeem bSecret pub
     broadcastTx tx
+    putStrLn "Alice claimed!"
 
 waitForBobClaim :: Tx -> IO Tx
 waitForBobClaim tx = do
@@ -112,7 +119,8 @@ getBSecret tx aSecrets = do
     decodeSums txin = do
         r <- S.decode $ scriptInput txin
         let ops = scriptOps r
-            opsSplit = splitAt (numSecrets - numChallenges) ops
+            -- TODO(hudon) in the future we'll only have (numSecrets - numChallenges) inputs
+            opsSplit = splitAt numSecrets ops
             getPushData (OP_PUSHDATA bs _) = S.decode bs
         mapM getPushData $ fst opsSplit
 

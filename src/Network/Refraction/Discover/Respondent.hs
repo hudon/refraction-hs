@@ -13,13 +13,14 @@ import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
+import Network.Haskoin.Transaction (Tx)
 import Network.Refraction.Blockchain (broadcastTx, findOPRETURNs, fetchUTXOs)
 import Network.Refraction.Discover.Types
 import Network.Refraction.Generator (makePairRequest, SatoshiValue)
 import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
 import Network.Refraction.Tor(secureConnect)
 
-runRespondent :: PrvKey -> Location -> IO Location
+runRespondent :: PrvKey -> Location -> IO (Location, Tx)
 runRespondent prvkey myLoc = do
     putStrLn "Running respondent..."
     (adLoc, aNonce) <- selectAdvertiser
@@ -33,8 +34,8 @@ runRespondent prvkey myLoc = do
     secureConnect adLoc (sendMessage msg)
     --unsecureSend False "i am alice, wanna trade bitcoins?"
     --
-    publishPairRequest prvkey (aNonce, rNonce)
-    return adLoc
+    lastTx <- publishPairRequest prvkey (aNonce, rNonce)
+    return (adLoc, lastTx)
 
 selectAdvertiser :: IO (Location, Nonce)
 selectAdvertiser = do
@@ -60,7 +61,7 @@ selectAdvertiser = do
     parseAd _ = Nothing
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
-publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO ()
+publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO Tx
 publishPairRequest prvkey nonces = do
     putStrLn "Publishing pair request..."
     let addr = pubKeyAddr $ derivePubKey prvkey
@@ -70,4 +71,4 @@ publishPairRequest prvkey nonces = do
     let tx = either undefined id $ makePairRequest utxos prvkey nonces tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Pair request published!"
-
+    return tx

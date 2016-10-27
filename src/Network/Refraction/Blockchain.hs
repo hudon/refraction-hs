@@ -47,7 +47,7 @@ data ResponseBroadcast = ResponseBroadcast {
 instance FromJSON ResponseBroadcast where
     parseJSON (Object m) = ResponseBroadcast <$> m .: "txid"
 
-broadcastTx :: Tx -> IO ()
+broadcastTx :: Tx -> IO TxHash
 broadcastTx tx = do
     putStrLn "Broadcasting"
     let url = baseURL ++ "/tx/send"
