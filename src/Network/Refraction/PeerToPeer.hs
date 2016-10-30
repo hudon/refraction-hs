@@ -6,26 +6,24 @@ module Network.Refraction.PeerToPeer
     , startServer
     ) where
 
-
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, writeChan)
 import Control.Monad (liftM)
-import Data.ByteString (hGetLine)
-import Data.ByteString.Lazy.Char8 (hPutStrLn)
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString (ByteString, hGetLine)
+import Data.ByteString.Char8 (hPutStrLn)
 import Data.Text (append)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network (PortNumber)
 import Network.Socket
 import System.IO hiding (hGetLine, hPutStrLn)
 
-type Msg = BL.ByteString
+type Msg = ByteString
 
 runConn :: (Socket, SockAddr) -> Chan Msg -> IO ()
 runConn (sock, _) chan = do
     hdl <- socketToHandle sock ReadWriteMode
     hSetBuffering hdl NoBuffering
-    clientMsg <- liftM BL.fromStrict $ hGetLine hdl
+    clientMsg <- hGetLine hdl
     writeChan chan clientMsg
     hClose hdl
 

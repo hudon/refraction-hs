@@ -3,6 +3,7 @@ module Network.Refraction.Blockchain
     ( broadcastTx
     , findOPRETURNs
     , fetchTx
+    , fetchSpentTxId
     , fetchUTXOs
     ) where
 
@@ -10,6 +11,7 @@ import Control.Exception (try)
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.Lens (_String, key)
+import Data.Aeson.Types
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import Data.List (union)
@@ -45,22 +47,36 @@ data ResponseBroadcast = ResponseBroadcast {
 instance FromJSON ResponseBroadcast where
     parseJSON (Object m) = ResponseBroadcast <$> m .: "txid"
 
-broadcastTx :: Tx -> IO ()
+broadcastTx :: Tx -> IO (Maybe TxHash)
 broadcastTx tx = do
     putStrLn "Broadcasting"
+    print tx
     let url = baseURL ++ "/tx/send"
     eresponse <- try $ post url (toJSON $ TxPayload tx)
     case eresponse of
-        Left e -> print (e :: HttpException)
-        Right response -> asJSON response >>= printTransaction
+        Left e -> print (e :: HttpException) >> return Nothing
+        Right r -> processResponse r
   where
-    printTransaction r = putStrLn . show . broadcastTxid $ r ^. responseBody
+    processResponse r = do
+        rjson <- asJSON r
+        let txid = broadcastTxid $ rjson ^. responseBody
+        print txid
+        return $ Just txid
 
 fetchTx :: TxHash -> IO Tx
 fetchTx txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
     r <- asJSON =<< get url
     return . rawtx $ r ^. responseBody
+
+fetchSpentTxId :: TxHash -> Int -> IO (Maybe TxHash)
+fetchSpentTxId txhash index = do
+    let url = baseURL ++ "/tx/" ++ B8.unpack (txHashToHex txhash)
+    r <- asJSON =<< get url
+    let result = r ^. responseBody
+    let spentTxId = flip parseMaybe result $ \obj -> do outs <- obj .: "vout"
+                                                        (outs !! index) .: "spentTxId"
+    return $ maybe Nothing (hexToTxHash . encodeUtf8) spentTxId
 
 data ResponseUTXO = ResponseUTXO {
       txid :: TxHash

@@ -10,15 +10,15 @@ module Network.Refraction.FairExchange.Types
     ) where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import GHC.Generics
 import Network.Haskoin.Crypto
 
 type KeyPair = (PrvKey, PubKey)
 type Secret = Integer
 
-numSecrets = 20 :: Int
-numChallenges = 5 :: Int
+numSecrets = 4 :: Int
+numChallenges = 2 :: Int
 
 data BobKeyMessage = BobKeyMessage {
       bKey1 :: PubKey

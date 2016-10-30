@@ -7,26 +7,27 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Chan (Chan, readChan)
 import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Lazy as BL
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
+import Network.Haskoin.Transaction (Tx)
 
 import Network.Refraction.Blockchain (broadcastTx, fetchUTXOs)
 import Network.Refraction.PeerToPeer (Msg)
 import Network.Refraction.Discover.Types
 import Network.Refraction.Generator (makeAdTransaction, makePairRequest, SatoshiValue)
 
-runAdvertiser :: Chan Msg -> PrvKey -> Location -> IO Location
+runAdvertiser :: Chan Msg -> PrvKey -> Location -> IO (Location, Tx)
 runAdvertiser chan prvkey loc = do
     putStrLn "Running advertiser..."
     g <- newGenIO :: IO CtrDRBG
     let aNonce = head $ crandomRs (minBound, maxBound) g :: Nonce
     publishAd prvkey loc aNonce
     (rNonce, rLoc) <- selectRespondent chan
-    publishPairResponse prvkey (aNonce, rNonce)
-    return rLoc
+    tx <- publishPairResponse prvkey (aNonce, rNonce)
+    return (rLoc, tx)
 
 publishAd :: PrvKey -> Location -> Nonce -> IO ()
 publishAd prvkey loc nonce = do
@@ -51,10 +52,10 @@ selectRespondent chan = do
       if n == 0 then pickRespondent msg else waitForRespondents (n + 1)
     pickRespondent msg = do
         putStrLn "picked a respondent"
-        let (rNonce, rLoc) = BL.splitAt 8 msg -- TODO: don't assume Word64 Nonce, use better schema
-        return (either undefined id $ S.decodeLazy rNonce, either undefined id $ S.decodeLazy rLoc)
+        let (rNonce, rLoc) = B.splitAt 8 msg -- TODO: don't assume Word64 Nonce, use better schema
+        return (either undefined id $ S.decode rNonce, either undefined id $ S.decode rLoc)
 
-publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO ()
+publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO Tx
 publishPairResponse prvkey nonces = do
     putStrLn "Publishing pair response"
     let addr = pubKeyAddr $ derivePubKey prvkey
@@ -65,5 +66,4 @@ publishPairResponse prvkey nonces = do
     let tx = either undefined id $ makePairRequest utxos prvkey nonces tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Pair response published!"
-
-
+    return tx

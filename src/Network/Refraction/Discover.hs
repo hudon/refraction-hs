@@ -10,6 +10,7 @@ module Network.Refraction.Discover
 
 import Control.Concurrent.Chan (Chan)
 import Network.Haskoin.Crypto (PrvKey)
+import Network.Haskoin.Transaction (Tx)
 import System.Random (getStdRandom, randomR)
 
 import Network.Refraction.Discover.Advertiser
@@ -19,7 +20,7 @@ import Network.Refraction.PeerToPeer (Msg)
 
 
 -- |Finds a mixing peer and returns its location to begin communication for fair exchange
-discover :: Chan Msg -> Location -> Bool -> Bool -> PrvKey -> IO Location
+discover :: Chan Msg -> Location -> Bool -> Bool -> PrvKey -> IO (Location, Tx)
 discover chan myLoc isBob isAlice prv = flipCoin >>= pickRole
   where
     pickRole heads
