@@ -16,7 +16,7 @@ import Network.Refraction.Generator (SatoshiValue)
 -- Advertise fee
 tao = 10000 :: SatoshiValue
 
-adFinder = "RFRCTN" :: Text
+adFinder = "RFRCTN14" :: Text
 onionLengthWithoutTLD = 16 :: Int
 
 type Location = ByteString

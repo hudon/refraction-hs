@@ -6,8 +6,8 @@ module Network.Refraction.Discover.Respondent
 import Control.Concurrent (threadDelay)
 import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Lazy as BL
 import Data.Maybe
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
@@ -30,7 +30,7 @@ runRespondent prvkey myLoc = do
     -- TODO: we can't use Tor until we have the ad transaction on the blockchain
     -- stuff working because the locations are dynamic. Use direct connection for now.
     -- TODO: figure out if we should use lazy or strict... or at least fix this inefficiency
-    let msg = BL.concat [S.encodeLazy rNonce, S.encodeLazy myLoc]
+    let msg = B.concat [S.encode rNonce, S.encode myLoc]
     secureConnect adLoc (sendMessage msg)
     --unsecureSend False "i am alice, wanna trade bitcoins?"
     --

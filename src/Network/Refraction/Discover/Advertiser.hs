@@ -7,8 +7,8 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Chan (Chan, readChan)
 import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.ByteString.Lazy as BL
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
@@ -52,8 +52,8 @@ selectRespondent chan = do
       if n == 0 then pickRespondent msg else waitForRespondents (n + 1)
     pickRespondent msg = do
         putStrLn "picked a respondent"
-        let (rNonce, rLoc) = BL.splitAt 8 msg -- TODO: don't assume Word64 Nonce, use better schema
-        return (either undefined id $ S.decodeLazy rNonce, either undefined id $ S.decodeLazy rLoc)
+        let (rNonce, rLoc) = B.splitAt 8 msg -- TODO: don't assume Word64 Nonce, use better schema
+        return (either undefined id $ S.decode rNonce, either undefined id $ S.decode rLoc)
 
 publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO Tx
 publishPairResponse prvkey nonces = do
