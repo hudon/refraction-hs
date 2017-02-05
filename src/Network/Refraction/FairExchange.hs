@@ -9,6 +9,7 @@ import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import Network.Haskoin.Crypto
 import Network.Haskoin.Transaction (Tx)
+import Network.Refraction.BitcoinUtils (makeKeyPair)
 import Network.Refraction.Discover (Location)
 import Network.Refraction.FairExchange.Alice
 import Network.Refraction.FairExchange.Bob
@@ -29,9 +30,6 @@ fairExchange isBob isAlice prv chan lastTx _ theirLocation = do
     mySecrets <- genSecrets numSecrets
     let run = if isBob then runBob else runAlice
     run chan (prv, derivePubKey prv) refundKeypair lastTx mySecrets theirLocation
-  where
-    genKey = withSource getEntropy genPrvKey
-    makeKeyPair = genKey >>= \p -> return (p, derivePubKey p)
 
 genSecrets :: Int -> IO [Integer]
 genSecrets n = do

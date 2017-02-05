@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Network.Refraction
+                     , Network.Refraction.BitcoinUtils
                      , Network.Refraction.Blockchain
                      , Network.Refraction.Discover
                      , Network.Refraction.Discover.Advertiser
@@ -56,6 +57,7 @@ executable refraction-exe
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
+                     , bytestring
                      , refraction
                      , yaml
                      , text
