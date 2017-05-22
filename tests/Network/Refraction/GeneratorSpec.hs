@@ -8,6 +8,7 @@ import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
 import Network.Refraction.BitcoinUtils
+import qualified Network.Refraction.BitcoinUtils
 import qualified Network.Refraction.Generator as G
 import Test.Hspec
 
@@ -16,7 +17,7 @@ spec = do
     describe "mkInput" $ do
         it "returns Left if non-decodable" $ do
             let txout = TxOut preAdValue $ S.encode "foo" -- bad output script
-                badUTXO = G.UTXO txout undefined
+                badUTXO = UTXO txout undefined
             G.mkInput badUTXO `shouldSatisfy` isLeft
     describe "makeAdTransaction" $ do
         it "returns change to signatory" $ do
@@ -46,7 +47,7 @@ preAdTxHash = read "TxHash \"aa89f9878323075e109efcbd44c7804db4bea9c85910d002d88
 preAdUTXO =
     let txout = TxOut preAdValue $ encodeOutputBS $ PayPKHash advertiserAddress
         op = OutPoint preAdTxHash 1
-    in G.UTXO txout op
+    in UTXO txout op
 
 adFee = 10000000 :: SatoshiValue -- 0.1 btc
 
