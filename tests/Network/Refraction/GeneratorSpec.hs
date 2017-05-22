@@ -7,6 +7,7 @@ import Network.Haskoin.Constants
 import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
+import Network.Refraction.BitcoinUtils
 import qualified Network.Refraction.Generator as G
 import Test.Hspec
 
@@ -40,14 +41,14 @@ advertiserPrvKey = read "PrvKey \"KzVhFsdDKRsLQPBu7Fkhm4S2fP5muXMLkikPfcRa8Kn72Q
 
 advertiserAddress = pubKeyAddr $ derivePubKey advertiserPrvKey
 
-preAdValue = 100000000 :: G.SatoshiValue -- 1 btc
+preAdValue = 100000000 :: SatoshiValue -- 1 btc
 preAdTxHash = read "TxHash \"aa89f9878323075e109efcbd44c7804db4bea9c85910d002d888b9fa70087570\""
 preAdUTXO =
     let txout = TxOut preAdValue $ encodeOutputBS $ PayPKHash advertiserAddress
         op = OutPoint preAdTxHash 1
     in G.UTXO txout op
 
-adFee = 10000000 :: G.SatoshiValue -- 0.1 btc
+adFee = 10000000 :: SatoshiValue -- 0.1 btc
 
 prepareAdTx :: Tx
 prepareAdTx =

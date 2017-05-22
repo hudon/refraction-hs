@@ -6,7 +6,6 @@ import System.Directory (doesFileExist)
 import System.Environment
 import System.IO
 import Control.Applicative
-import qualified Data.ByteString.Char8 as B8
 import Data.Maybe (fromMaybe)
 import Data.Yaml
 import Data.Text (Text)
@@ -70,18 +69,19 @@ runRefraction isBob isAlice ignoreValidation = do
 
     putStr "Enter destination address for mixed coins (Base58 encoded): "
     hFlush stdout
-    pubkey <- T.getLine
+    endAddr <- T.getLine
 
     putStr "Enter refund address for non-mixed coins that need to be refunded (Base58 encoded):"
     hFlush stdout
     refundAddr <- T.getLine
 
-    (_, refundAddr) <- BU.makeAddress
-    putStr "Send 1 transaction to this address to begin mixing: "
-    B8.putStrLn refundAddr
-    hFlush stdout
+    -- CURRENTLY UNUSED:
+    --(_, startAddr) <- BU.makeTextKeyPair
+    --putStr "Send funds to mix in 1 transaction to this address to begin mixing: "
+    --T.putStrLn startAddr
+    --hFlush stdout
 
-    R.refract config isBob isAlice ignoreValidation prvkey pubkey
+    R.refract config isBob isAlice ignoreValidation prvkey endAddr refundAddr
 
 main = do
     (isBob, isAlice, ignoreValidation) <- readOptions

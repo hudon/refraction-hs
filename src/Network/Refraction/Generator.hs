@@ -7,9 +7,8 @@ module Network.Refraction.Generator
     , makeBobClaim
     , makeBobCommit
     , makePairRequest
+    , makeSplitTransaction
     , mkInput -- TODO do not export this once we're testing the higher level functions
-    , SatoshiValue
-    , UTXO(..)
     ) where
 
 import Data.Word (Word64)
@@ -20,19 +19,14 @@ import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
 import Network.Haskoin.Util (updateIndex)
+import Network.Refraction.BitcoinUtils
 
-type SatoshiValue = Word64
-
-data UTXO = UTXO {
-      _txOut :: TxOut
-    , _outPoint :: OutPoint
-} deriving (Show)
-
-instance Coin UTXO where
-    coinValue =  outValue . _txOut
 
 -- Default transaction fee in satoshis
 dTxFee = 10000
+
+-- Mix Unit (0.00090000 BTC for now)
+mixUnit = 80000
 
 -- |Takes a UTXO and returns a SigInput that can be used to sign a Tx
 mkInput :: UTXO -> Either String SigInput
@@ -49,9 +43,22 @@ calculateAmount = foldl sumVal 0
 -- |Takes a list of utxos and associated private keys and pays to an address
 makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
 makeSimpleTransaction utxos prvkeys addr = do
-    let tx = either undefined id $ buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    tx <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins prvkeys
+
+-- |Takes a list of utxos and associated private keys and splits the amount into mixUnit outputs
+-- the outputs all go to the first private key given, except for the excess amounts, which
+-- go to the refundAddr
+makeSplitTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
+makeSplitTransaction utxos prvkeys@(p:_) refundAddr = do
+  let outAddr = pubKeyAddr $ derivePubKey p
+      outputSum = calculateAmount utxos
+      refundOut = (addrToBase58 refundAddr, outputSum `mod` mixUnit)
+      outs = replicate (fromIntegral $ outputSum `div` mixUnit) (addrToBase58 outAddr, mixUnit)
+  tx <- buildAddrTx (map _outPoint utxos) (refundOut:outs)
+  ins <- mapM mkInput utxos
+  signTx tx ins prvkeys
 
 -- We reverse the hashes here because the redeem script will expect the secrets in reverse order
 makeAliceCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String (Tx, Script)
@@ -98,7 +105,7 @@ scriptAddrNonStd = ScriptAddress . hash160 . getHash256 . hash256 . S.encode
 signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String Tx
 signP2SH utxos prvkeys redeemScript = do
     let scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
-        tx = either undefined id $ buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
+    tx <- buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins  prvkeys
 
@@ -142,9 +149,9 @@ makeAdTransaction :: [UTXO] -- ^ The outputs to spend
                   -> Either String Tx
 makeAdTransaction utxos prvkey loc nonce adFee ref = do
     let ad = B.concat [ref, loc, S.encode nonce]
-        tx = either undefined id $ buildTx (map _outPoint utxos) [
-            (DataCarrier ad, 0),
-            (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
+    tx <- buildTx (map _outPoint utxos) [
+        (DataCarrier ad, 0),
+        (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins [prvkey]
 
@@ -157,8 +164,8 @@ makePairRequest :: [UTXO] -- ^ The outputs to spend
                 -> Either String Tx
 makePairRequest utxos prvkey (aNonce, rNonce) adFee ref = do
     let ad = B.concat [ref, S.encode aNonce, S.encode rNonce]
-        tx = either undefined id $ buildTx (map _outPoint utxos) [
-            (DataCarrier ad, 0),
-            (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
+    tx <- buildTx (map _outPoint utxos) [
+        (DataCarrier ad, 0),
+        (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins [prvkey]

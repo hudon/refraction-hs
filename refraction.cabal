@@ -28,6 +28,7 @@ library
                      , Network.Refraction.FairExchange.Types
                      , Network.Refraction.Generator
                      , Network.Refraction.PeerToPeer
+                     , Network.Refraction.RoundManager
                      , Network.Refraction.Tor
 -- TODO: restrict these deps to safer ranges
   build-depends:       aeson

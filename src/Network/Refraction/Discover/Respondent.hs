@@ -14,9 +14,12 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Script (Script, ScriptOp(..), scriptOps)
 import Network.Haskoin.Transaction (Tx)
+
+-- TODO(hudon) make emacs autoimport?
+import Network.Refraction.BitcoinUtils
 import Network.Refraction.Blockchain (broadcastTx, findOPRETURNs, fetchUTXOs)
 import Network.Refraction.Discover.Types
-import Network.Refraction.Generator (makePairRequest, SatoshiValue)
+import Network.Refraction.Generator (makePairRequest)
 import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
 import Network.Refraction.Tor(secureConnect)
 

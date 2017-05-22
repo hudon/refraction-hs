@@ -4,9 +4,12 @@ packages:
 - '.'
 - location:
     git: https://github.com/haskoin/haskoin.git
-    commit: 3f2b04cc735f5fb78a9338031d6bf7e86bd4de7c
+    commit: 7730c8c070a8d71b16c4df9c2637881ac47878e3
   subdirs:
   - haskoin-core
   extra-dep: true
-extra-deps: []
-resolver: lts-7.2
+extra-deps:
+  - murmur3-1.0.3
+  - pbkdf-1.1.1.1
+  - secp256k1-0.4.8
+resolver: lts-8.13

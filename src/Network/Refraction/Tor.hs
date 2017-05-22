@@ -21,6 +21,7 @@ whichControlPort = do
     availability <- mapM Tor.isAvailable ports
     return . fst . head . filter ((== Tor.Available) . snd) $ zip ports availability
 
+-- TODO(hudon): better failure if tor is not running... now it's a cryptic (empty list) error
 makeHiddenService :: PortNumber -> (ByteString -> IO ()) -> IO ()
 makeHiddenService privatePort f = do
     torPort <- whichControlPort

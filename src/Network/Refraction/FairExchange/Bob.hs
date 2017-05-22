@@ -17,6 +17,8 @@ import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
 import Network.Haskoin.Util
+
+import Network.Refraction.BitcoinUtils
 import Network.Refraction.Blockchain (broadcastTx, fetchTx, fetchUTXOs)
 import Network.Refraction.FairExchange.Types
 -- TODO(hudon): doesn't make sense to depend on Discover for location type
@@ -65,7 +67,7 @@ bsToHexText = decodeUtf8 . B16.encode
 bobCommit :: Chan Msg -> KeyPair -> PubKey -> [Text] -> Tx -> Location -> IO (Tx, Script)
 bobCommit chan (prv, pub) aPub bHashes lastTx theirLocation = do
     putStrLn "Bob is committing..."
-    let utxo = makeUTXO lastTx 1
+    let (_:utxo:_) = getUTXOs lastTx
     -- TODO(hudon) don't do this partial pattern...
     let bHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . encodeUtf8) bHashes
     let Right (tx, bCommitRedeem) = makeBobCommit [utxo] [prv] aPub pub bHashes256
@@ -88,14 +90,14 @@ bobCommit chan (prv, pub) aPub bHashes lastTx theirLocation = do
     print "received alice's commit hash"
     print aCommitHash
     -- TODO (hudon) the transaction might not be fetchable yet (has to be relayed)
-    aCommit <- fetchTx aCommitHash
+    aCommit <- liftM (fromMaybe undefined) $ fetchTx aCommitHash
     putStrLn "Bob committed!"
     return (aCommit, aCommitRedeem)
 
 bobClaim :: KeyPair -> Tx -> Script -> [Integer] -> IO ()
 bobClaim (prv, pub) aCommit aCommitRedeem sums = do
     putStrLn "Bob is claiming..."
-    let utxo = makeUTXO aCommit 0
+    let (utxo:_) = getUTXOs aCommit
     -- TODO don't make these arguments lists
     let Right tx = makeBobClaim [utxo] [prv] aCommitRedeem sums pub
     broadcastTx tx
@@ -103,12 +105,6 @@ bobClaim (prv, pub) aCommit aCommitRedeem sums = do
 
 verifyRedeem :: a -> Bool
 verifyRedeem = const True
-
-makeUTXO :: Tx -> Int -> UTXO
-makeUTXO tx index =
-    let op = OutPoint (txHash tx) (fromIntegral index)
-        to = txOut tx !! index
-    in UTXO to op
 
 send :: Location -> Msg -> IO ()
 send loc x = secureConnect loc $ sendMessage x

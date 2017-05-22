@@ -2,12 +2,15 @@
 module Network.Refraction.Blockchain
     ( broadcastTx
     , findOPRETURNs
-    , fetchTx
     , fetchSpentTxId
+    , fetchTx
+    , fetchTxWaitForRelay
     , fetchUTXOs
+    , waitForTxToAddress
     ) where
 
-import Control.Exception (try)
+import Control.Concurrent (threadDelay)
+import Control.Exception (throwIO, try)
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.Lens (_String, key)
@@ -18,26 +21,25 @@ import Data.List (union)
 import Data.Maybe (fromMaybe)
 import qualified Data.Serialize as S
 import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word32)
 import GHC.Generics (Generic)
-import Network.Haskoin.Block (Block, BlockHash, blockHashToHex, blockHeader, blockTxns, headerHash, hexToBlockHash, prevBlock)
+import Network.Haskoin.Block
 import Network.Haskoin.Crypto (Address, addrToBase58)
 import Network.Haskoin.Script (Script(..), ScriptOp(..))
-import Network.Haskoin.Transaction (hexToTxHash, OutPoint(..), scriptOutput, Tx, TxHash, txOut, TxOut(..), txHashToHex)
+import Network.Haskoin.Transaction
 import Network.Haskoin.Util (decodeHex, decodeToMaybe)
-import Network.HTTP.Client (HttpException(..))
-import Network.Refraction.Generator (SatoshiValue, UTXO(..))
+import Network.HTTP.Client (HttpException(..), HttpExceptionContent(..))
 import Network.Wreq
+
+import Network.Refraction.BitcoinUtils
 
 baseURL = "https://testnet.blockexplorer.com/api"
 
 data TxPayload = TxPayload {
       rawtx :: Tx
 } deriving (Generic)
-
 instance FromJSON TxPayload
-
 instance ToJSON TxPayload
 
 data ResponseBroadcast = ResponseBroadcast {
@@ -63,11 +65,27 @@ broadcastTx tx = do
         print txid
         return $ Just txid
 
-fetchTx :: TxHash -> IO Tx
+-- |Attempts to fetch the TX. Return Nothing if 404, can throw exception if other error occurs
+fetchTx :: TxHash -> IO (Maybe Tx)
 fetchTx txhash = do
     let url = baseURL ++ "/rawtx/" ++ B8.unpack (txHashToHex txhash)
-    r <- asJSON =<< get url
-    return . rawtx $ r ^. responseBody
+    eres <- try $ get url
+    case eres of
+      Left e -> handleErr e
+      Right r -> do
+        r <- asJSON =<< get url
+        return . Just . rawtx $ r ^. responseBody
+  where
+    handleErr e@(HttpExceptionRequest _ (StatusCodeException s _))
+      | s ^. responseStatus ^. statusCode == 404 = return Nothing
+      | otherwise = throwIO e
+
+-- TODO(hudon): add timeout
+fetchTxWaitForRelay :: TxHash -> IO Tx
+fetchTxWaitForRelay th = do
+    putStrLn "Waiting for round split tx relay..."
+    fetchTx th >>= maybe loop return
+  where loop = threadDelay 30000000 >> fetchTxWaitForRelay th
 
 fetchSpentTxId :: TxHash -> Int -> IO (Maybe TxHash)
 fetchSpentTxId txhash index = do
@@ -132,3 +150,7 @@ fetchRecentBlocks excludes = do
             return $ b : prevBlocks
     toBlock :: T.Text -> Block
     toBlock = either undefined id . S.decode . fromMaybe undefined . decodeHex . encodeUtf8
+
+-- Waits until the given address receives funds, and returns the funding transaction
+waitForTxToAddress :: Address -> IO Tx
+waitForTxToAddress = undefined

@@ -10,7 +10,8 @@ module Network.Refraction.Discover.Types
 import Data.ByteString (ByteString)
 import Data.Text
 import Data.Word (Word64)
-import Network.Refraction.Generator (SatoshiValue)
+
+import Network.Refraction.BitcoinUtils
 
 -- TODO(hudon): make this fee dynamic (set by user in config?)
 -- Advertise fee

@@ -14,10 +14,11 @@ import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
 import Network.Haskoin.Transaction (Tx)
 
+import Network.Refraction.BitcoinUtils
 import Network.Refraction.Blockchain (broadcastTx, fetchUTXOs)
-import Network.Refraction.PeerToPeer (Msg)
 import Network.Refraction.Discover.Types
-import Network.Refraction.Generator (makeAdTransaction, makePairRequest, SatoshiValue)
+import Network.Refraction.Generator (makeAdTransaction, makePairRequest)
+import Network.Refraction.PeerToPeer (Msg)
 
 runAdvertiser :: Chan Msg -> PrvKey -> Location -> IO (Location, Tx)
 runAdvertiser chan prvkey loc = do

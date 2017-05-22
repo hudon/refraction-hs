@@ -21,6 +21,8 @@ import Network.Haskoin.Crypto
 import Network.Haskoin.Script
 import Network.Haskoin.Transaction
 import Network.Haskoin.Util
+
+import Network.Refraction.BitcoinUtils
 import Network.Refraction.Blockchain (broadcastTx, fetchTx, fetchSpentTxId)
 import Network.Refraction.Discover (Location)
 import Network.Refraction.FairExchange.Types
@@ -85,10 +87,10 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
     bCommitHash <- liftM (either printErr id . S.decode . fromMaybe undefined . decodeHex) $ readChan chan
     print "received bob's commit hash"
     print bCommitHash
-    bCommit <- fetchTx bCommitHash
+    bCommit <- liftM (fromMaybe undefined) $ fetchTx bCommitHash
     -- TODO(hudon) wait for bob commit confirmations
     --
-    let utxo = makeUTXO lastTx 1
+    let (_:utxo:_) = getUTXOs lastTx
         sumHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . encodeUtf8) sumHashes
     let Right (tx, aCommitRedeem) = makeAliceCommit [utxo] [prv] pub bPub sumHashes256
     print "Sending redeem script"
@@ -105,19 +107,18 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
 aliceClaim :: KeyPair -> Tx -> Tx -> Script -> [Integer] -> IO ()
 aliceClaim (prv, pub) aCommit bCommit bCommitRedeem aSecrets = do
     putStrLn "Alice is claiming..."
-    bClaim <- waitForBobClaim aCommit
+    bClaim <- liftM (fromMaybe undefined) $ waitForBobClaim aCommit
     -- TODO(hudon) expand pattern we're matching on to catch errors
     let Right bSecret = getBSecret bClaim aSecrets
-        utxo = makeUTXO bCommit 0
+        (utxo:_) = getUTXOs bCommit
         Right tx = makeAliceClaim [utxo] [prv] bCommitRedeem bSecret pub
     broadcastTx tx
     putStrLn "Alice claimed!"
 
-waitForBobClaim :: Tx -> IO Tx
+waitForBobClaim :: Tx -> IO (Maybe Tx)
 waitForBobClaim tx = do
     putStrLn "Waiting for bob's claim..."
-    spentTxId <- fetchSpentTxId (txHash tx) 0
-    maybe loop fetchTx spentTxId
+    fetchSpentTxId (txHash tx) 0 >>= maybe loop fetchTx
   where loop = threadDelay 30000000 >> waitForBobClaim tx
 
 -- TODO(hudon) don't assume it's the first input
@@ -137,12 +138,6 @@ getBSecret tx aSecrets = do
 -- TODO(hudon) implement me
 verifyRedeem :: a -> Bool
 verifyRedeem = const True
-
-makeUTXO :: Tx -> Word32 -> UTXO
-makeUTXO tx index =
-    let op = OutPoint (txHash tx) index
-        to = txOut tx !! (fromIntegral index)
-    in UTXO to op
 
 send :: Location -> Msg -> IO ()
 send loc x = secureConnect loc $ sendMessage x
