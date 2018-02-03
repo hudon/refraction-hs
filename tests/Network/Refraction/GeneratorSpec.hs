@@ -1,7 +1,8 @@
-module Network.Refraction.GeneratorSpec (spec) where
+module Network.Refraction.GeneratorSpec (main, spec) where
 
 import Data.Either
 import qualified Data.Serialize as S
+import Data.String (fromString)
 import Data.Word
 import Network.Haskoin.Constants
 import Network.Haskoin.Crypto
@@ -11,6 +12,9 @@ import Network.Refraction.BitcoinUtils
 import qualified Network.Refraction.BitcoinUtils
 import qualified Network.Refraction.Generator as G
 import Test.Hspec
+
+main :: IO ()
+main = setProdnet >> hspec spec
 
 spec :: Spec
 spec = do
@@ -22,7 +26,7 @@ spec = do
     describe "makeAdTransaction" $ do
         it "returns change to signatory" $ do
             let isReturnedChange = isChange . decodeOutputBS . scriptOutput
-                isChange (Right (PayPKHash addr)) = addr == advertiserAddress
+                isChange (Right (PayPKHash h)) = (PubKeyAddress h) == advertiserAddress
                 isChange _ = False
             any isReturnedChange (txOut prepareAdTx) `shouldBe` True
         it "has 2 outputs" $ do
@@ -30,7 +34,7 @@ spec = do
     describe "makePairRequest" $ do
         it "returns change to signatory" $ do
             let isReturnedChange = isChange . decodeOutputBS . scriptOutput
-                isChange (Right (PayPKHash addr)) = addr == advertiserAddress
+                isChange (Right (PayPKHash h)) = (PubKeyAddress h) == advertiserAddress
                 isChange _ = False
             any isReturnedChange (txOut preparePairRequest) `shouldBe` True
         it "has 2 outputs" $ do
@@ -43,9 +47,9 @@ advertiserPrvKey = read "PrvKey \"KzVhFsdDKRsLQPBu7Fkhm4S2fP5muXMLkikPfcRa8Kn72Q
 advertiserAddress = pubKeyAddr $ derivePubKey advertiserPrvKey
 
 preAdValue = 100000000 :: SatoshiValue -- 1 btc
-preAdTxHash = read "TxHash \"aa89f9878323075e109efcbd44c7804db4bea9c85910d002d888b9fa70087570\""
+preAdTxHash = fromString "aa89f9878323075e109efcbd44c7804db4bea9c85910d002d888b9fa70087570"
 preAdUTXO =
-    let txout = TxOut preAdValue $ encodeOutputBS $ PayPKHash advertiserAddress
+    let txout = TxOut preAdValue $ encodeOutputBS $ addressToOutput advertiserAddress
         op = OutPoint preAdTxHash 1
     in UTXO txout op
 
