@@ -15,7 +15,7 @@ import Network.Haskoin.Util
 -- use https://testnet.blockexplorer.com/tx/send to broadcast
 
 main = do
-    switchToTestnet3
+    setTestnet
     --makeBobCommitTx
     --makeAliceCommitTx
     -- Once you have the hex-encoded redeem scripts from the above commit txs as well as the

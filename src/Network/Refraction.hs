@@ -12,7 +12,7 @@ import Data.Text (Text, append)
 import qualified Data.Text.IO as TI
 import qualified Data.Text.Encoding as TE
 import Data.Yaml
-import Network.Haskoin.Constants (switchToTestnet3)
+import Network.Haskoin.Constants (setTestnet)
 import Network.Haskoin.Transaction (OutPoint(..))
 import qualified Network.Haskoin.Crypto as C
 
@@ -55,7 +55,7 @@ refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> Text -> I
 refract config isBob isAlice ignoreValidation prv endAddr refundAddr = do
     let btcNetwork = network . bitcoin $ config
     TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
-    when (btcNetwork == "testnet3") switchToTestnet3
+    when (btcNetwork == "testnet3") setTestnet
     case () of
       _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
         | not (ignoreValidation || isValidAddress endAddr) -> handleBadAddress endAddr

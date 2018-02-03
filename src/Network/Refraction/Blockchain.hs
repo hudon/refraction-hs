@@ -28,7 +28,7 @@ import Network.Haskoin.Block
 import Network.Haskoin.Crypto (Address, addrToBase58)
 import Network.Haskoin.Script (Script(..), ScriptOp(..))
 import Network.Haskoin.Transaction
-import Network.Haskoin.Util (decodeHex, decodeToMaybe)
+import Network.Haskoin.Util (decodeHex)
 import Network.HTTP.Client (HttpException(..), HttpExceptionContent(..))
 import Network.Wreq
 

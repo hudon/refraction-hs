@@ -91,6 +91,8 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
     -- TODO(hudon) wait for bob commit confirmations
     --
     let (_:utxo:_) = getUTXOs lastTx
+        -- TODO(hudon) clean up these fromEither/fromMaybe
+        bsToHash256 bs = either (const Nothing) Just (S.decode bs)
         sumHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . encodeUtf8) sumHashes
     let Right (tx, aCommitRedeem) = makeAliceCommit [utxo] [prv] pub bPub sumHashes256
     print "Sending redeem script"

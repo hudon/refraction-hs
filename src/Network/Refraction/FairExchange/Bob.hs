@@ -68,9 +68,10 @@ bobCommit :: Chan Msg -> KeyPair -> PubKey -> [Text] -> Tx -> Location -> IO (Tx
 bobCommit chan (prv, pub) aPub bHashes lastTx theirLocation = do
     putStrLn "Bob is committing..."
     let (_:utxo:_) = getUTXOs lastTx
-    -- TODO(hudon) don't do this partial pattern...
-    let bHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . encodeUtf8) bHashes
-    let Right (tx, bCommitRedeem) = makeBobCommit [utxo] [prv] aPub pub bHashes256
+        -- TODO(hudon) don't do this partial pattern...
+        bsToHash256 bs = either (const Nothing) Just (S.decode bs)
+        bHashes256 = map (fromMaybe undefined . bsToHash256 . fromMaybe undefined . decodeHex . encodeUtf8) bHashes
+        Right (tx, bCommitRedeem) = makeBobCommit [utxo] [prv] aPub pub bHashes256
     print "Sending redeem script"
     -- TODO if we don't print, alice decoding fails...
     print bCommitRedeem

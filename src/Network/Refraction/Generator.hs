@@ -43,7 +43,7 @@ calculateAmount = foldl sumVal 0
 -- |Takes a list of utxos and associated private keys and pays to an address
 makeSimpleTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
 makeSimpleTransaction utxos prvkeys addr = do
-    tx <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    tx <- buildTx (map _outPoint utxos) [(addressToOutput addr, calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins prvkeys
 
@@ -70,7 +70,7 @@ makeAliceCommit utxos prvkeys aPubkey bPubkey bHashes = do
 makeAliceClaim :: [UTXO] -> [PrvKey] -> Script -> Integer -> PubKey -> Either String Tx
 makeAliceClaim utxos prvkeys redeemScript secret aPubkey = do
     let addr = pubKeyAddr aPubkey
-    unsigned <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    unsigned <- buildTx (map _outPoint utxos) [(addressToOutput addr, calculateAmount utxos)]
     signClaimTx unsigned [secret] 0 redeemScript (head prvkeys)
 
 makeBobCommit :: [UTXO] -> [PrvKey] -> PubKey -> PubKey -> [Hash256] -> Either String (Tx, Script)
@@ -82,7 +82,7 @@ makeBobCommit utxos prvkeys aPubkey bPubkey bHashes = do
 makeBobClaim :: [UTXO] -> [PrvKey] -> Script -> [Integer] -> PubKey -> Either String Tx
 makeBobClaim utxos prvkeys redeemScript sums bPubkey = do
     let addr = pubKeyAddr bPubkey
-    unsigned <- buildTx (map _outPoint utxos) [(PayPKHash addr, calculateAmount utxos)]
+    unsigned <- buildTx (map _outPoint utxos) [(addressToOutput addr, calculateAmount utxos)]
     signClaimTx unsigned sums 0 redeemScript (head prvkeys)
 
 -- TODO does this need to be in an either?
@@ -100,11 +100,11 @@ signClaimTx tx inputData i rdm key = do
 
 -- TODO put this is haskoin
 scriptAddrNonStd :: Script -> Address
-scriptAddrNonStd = ScriptAddress . hash160 . getHash256 . hash256 . S.encode
+scriptAddrNonStd = ScriptAddress . addressHash . S.encode
 
 signP2SH :: [UTXO] -> [PrvKey] -> Script -> Either String Tx
 signP2SH utxos prvkeys redeemScript = do
-    let scriptOut = PayScriptHash (scriptAddrNonStd redeemScript)
+    let scriptOut = addressToOutput $ scriptAddrNonStd redeemScript
     tx <- buildTx (map _outPoint utxos) [(scriptOut, calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins  prvkeys
@@ -151,7 +151,7 @@ makeAdTransaction utxos prvkey loc nonce adFee ref = do
     let ad = B.concat [ref, loc, S.encode nonce]
     tx <- buildTx (map _outPoint utxos) [
         (DataCarrier ad, 0),
-        (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
+        (addressToOutput (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins [prvkey]
 
@@ -166,6 +166,6 @@ makePairRequest utxos prvkey (aNonce, rNonce) adFee ref = do
     let ad = B.concat [ref, S.encode aNonce, S.encode rNonce]
     tx <- buildTx (map _outPoint utxos) [
         (DataCarrier ad, 0),
-        (PayPKHash (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
+        (addressToOutput (pubKeyAddr (derivePubKey prvkey)), calculateAmount utxos)]
     ins <- mapM mkInput utxos
     signTx tx ins [prvkey]
