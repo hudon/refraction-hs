@@ -47,7 +47,9 @@ prepareRounds isBob isAlice startPrv endAddr refundAddr = do
   -- TODO for round timeouts (if no peer is found for that unit), the funds should go back to refundAddr
   -- TODO(hudon): once we use the startPrvKey (or startAddr), wait for it to receive funds before continuing
   utxos <- fetchUTXOs $ toAddr startPrv
+  putStrLn "Making split transaction..."
   splitTx <- fromEither $ makeSplitTransaction utxos [startPrv] refundAddr
+  putStrLn "Split transaction created."
   broadcastTx splitTx
   _ <- fetchTxWaitForRelay $ HT.txHash splitTx
   putStrLn "Starting rounds..."

@@ -25,8 +25,12 @@ import Network.Refraction.BitcoinUtils
 -- Default transaction fee in satoshis
 dTxFee = 10000
 
--- Mix Unit (0.00090000 BTC for now)
+-- Mix Unit in satoshis (0.00080000 BTC for now)
 mixUnit = 80000
+
+-- We set a cap to how much we split the inputs to Refraction just in case the mixUnit
+-- is too small comparatively (otherwise we'd create a huge split transaction)
+splitCountMax = 10
 
 -- |Takes a UTXO and returns a SigInput that can be used to sign a Tx
 mkInput :: UTXO -> Either String SigInput
@@ -34,6 +38,7 @@ mkInput utxo = do
     pso <- decodeOutputBS . scriptOutput $ _txOut utxo
     return $ SigInput pso (_outPoint utxo) (SigAll False) Nothing
 
+-- TODO(hudon): do we want a smarter fee approach? Should we interact with the full node for fee?
 -- |Our miner fee grows linearly with the number of inputs
 calculateAmount :: [UTXO] -> SatoshiValue
 calculateAmount = foldl sumVal 0
@@ -54,8 +59,10 @@ makeSplitTransaction :: [UTXO] -> [PrvKey] -> Address -> Either String Tx
 makeSplitTransaction utxos prvkeys@(p:_) refundAddr = do
   let outAddr = pubKeyAddr $ derivePubKey p
       outputSum = calculateAmount utxos
-      refundOut = (addrToBase58 refundAddr, outputSum `mod` mixUnit)
-      outs = replicate (fromIntegral $ outputSum `div` mixUnit) (addrToBase58 outAddr, mixUnit)
+      splitCount = min splitCountMax (outputSum `div` mixUnit)
+      refundAmount = outputSum - (splitCount * mixUnit)
+      refundOut = (addrToBase58 refundAddr, refundAmount)
+      outs = replicate (fromIntegral splitCount) (addrToBase58 outAddr, mixUnit)
   tx <- buildAddrTx (map _outPoint utxos) (refundOut:outs)
   ins <- mapM mkInput utxos
   signTx tx ins prvkeys

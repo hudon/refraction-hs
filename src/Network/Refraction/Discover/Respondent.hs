@@ -30,13 +30,11 @@ runRespondent prvkey myLoc = do
 
     g <- newGenIO :: IO CtrDRBG
     let rNonce = head $ crandomRs (minBound, maxBound) g :: Nonce
-    -- TODO: we can't use Tor until we have the ad transaction on the blockchain
-    -- stuff working because the locations are dynamic. Use direct connection for now.
     -- TODO: figure out if we should use lazy or strict... or at least fix this inefficiency
     let msg = B.concat [S.encode rNonce, S.encode myLoc]
+    putStrLn "Sending secure message to advertiser..."
     secureConnect adLoc (sendMessage msg)
-    --unsecureSend False "i am alice, wanna trade bitcoins?"
-    --
+    putStrLn "Sent secure message to advertiser."
     lastTx <- publishPairRequest prvkey (aNonce, rNonce)
     return (adLoc, lastTx)
 
@@ -54,8 +52,8 @@ selectAdvertiser = do
         (opreturns, newExcludes) <- findOPRETURNs excludeHashes
         let adM = foldl parseAndChoose Nothing $ map scriptOps opreturns
         case adM of
-            -- If there were no ads, sleep for 30 seconds and try again
-            Nothing -> threadDelay 30000000 >> findAd' newExcludes
+            -- If there were no ads, sleep for 15 seconds and try again
+            Nothing -> threadDelay 15000000 >> findAd' newExcludes
             Just ad -> return ad
     parseAndChoose prevAd newAd = if isJust prevAd then prevAd else parseAd newAd
     parseAd [OP_RETURN, OP_PUSHDATA bs _] = do

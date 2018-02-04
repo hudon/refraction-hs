@@ -111,11 +111,14 @@ toUTXO r = UTXO txOut outPoint
     txOut = TxOut (satoshis r) (fromMaybe undefined . decodeHex . encodeUtf8 . scriptPubKey $ r)
     outPoint = OutPoint (txid r)  (vout r)
 
+-- Fetches UTXOs for the given address and filters for only the UTXOs with positive amounts
 fetchUTXOs :: Address -> IO [UTXO]
 fetchUTXOs addr = do
     let url = baseURL ++ "/addr/" ++ B8.unpack (addrToBase58 addr) ++ "/utxo"
     r <- asJSON =<< get url
-    return . map toUTXO $ r ^. responseBody
+    return . filter hasPositiveAmount . map toUTXO $ r ^. responseBody
+  where
+    hasPositiveAmount utxo = coinValue utxo > 0
 
 findOPRETURNs :: [BlockHash] -> IO ([Script], [BlockHash])
 findOPRETURNs excludes = do
@@ -125,6 +128,7 @@ findOPRETURNs excludes = do
   where
     blockHash = headerHash . blockHeader
     firstScript :: Tx -> Script
+    -- TODO(hudon): what if the ad is not in the first output?...
     firstScript = either undefined id . S.decode . scriptOutput . head . txOut
     -- TODO: use Haskoin DataCarrier logic instead once released
     isDataCarrier (Script [OP_RETURN, OP_PUSHDATA _ _]) = True
@@ -135,7 +139,7 @@ fetchRecentBlocks excludes = do
     let url = baseURL ++ "/status?q=getLastBlockHash"
     r <- get url
     let lastBlockHash = encodeUtf8 $ r ^. responseBody . key "lastblockhash" . _String
-    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 3
+    fetchBlockchain (fromMaybe undefined $ hexToBlockHash lastBlockHash) excludes 5
   where
     fetchBlockchain :: BlockHash -> [BlockHash] -> Int -> IO [Block]
     fetchBlockchain tipHash excludes depth

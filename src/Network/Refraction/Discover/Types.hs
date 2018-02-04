@@ -17,6 +17,7 @@ import Network.Refraction.BitcoinUtils
 -- Advertise fee
 tao = 10000 :: SatoshiValue
 
+--TODO(hudon): identifier could be unique per pool
 adFinder = "RFRCTN14" :: Text
 onionLengthWithoutTLD = 16 :: Int
 
