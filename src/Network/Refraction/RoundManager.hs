@@ -28,7 +28,7 @@ startRound isBob isAlice addr refundAddr prv utxo = do
     putStrLn "Making hidden service..."
     makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
-        (theirLocation, lastTx) <- discover chan myLocation isBob isAlice prv
+        (theirLocation, lastTx) <- discover chan myLocation isBob isAlice prv utxo
         putStrLn "discover done!"
         fairExchange isBob isAlice prv chan lastTx myLocation theirLocation
 

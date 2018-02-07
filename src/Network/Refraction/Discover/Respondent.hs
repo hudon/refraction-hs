@@ -23,8 +23,8 @@ import Network.Refraction.Generator (makePairRequest)
 import Network.Refraction.PeerToPeer (Msg, sendMessage, unsecureSend)
 import Network.Refraction.Tor(secureConnect)
 
-runRespondent :: PrvKey -> Location -> IO (Location, Tx)
-runRespondent prvkey myLoc = do
+runRespondent :: PrvKey -> UTXO -> Location -> IO (Location, Tx)
+runRespondent prvkey utxo myLoc = do
     putStrLn "Running respondent..."
     (adLoc, aNonce) <- selectAdvertiser
 
@@ -35,7 +35,7 @@ runRespondent prvkey myLoc = do
     putStrLn "Sending secure message to advertiser..."
     secureConnect adLoc (sendMessage msg)
     putStrLn "Sent secure message to advertiser."
-    lastTx <- publishPairRequest prvkey (aNonce, rNonce)
+    lastTx <- publishPairRequest prvkey utxo (aNonce, rNonce)
     return (adLoc, lastTx)
 
 selectAdvertiser :: IO (Location, Nonce)
@@ -62,14 +62,10 @@ selectAdvertiser = do
     parseAd _ = Nothing
 
 -- Respondent: publishes T{R -> R, tip = tao + extra, TEXT(id = encAPK(nA, nR))}
-publishPairRequest :: PrvKey -> (Nonce, Nonce) -> IO Tx
-publishPairRequest prvkey nonces = do
+publishPairRequest :: PrvKey -> UTXO -> (Nonce, Nonce) -> IO Tx
+publishPairRequest prvkey utxo nonces = do
     putStrLn "Publishing pair request..."
-    let addr = pubKeyAddr $ derivePubKey prvkey
-    utxos <- fetchUTXOs addr
-    putStrLn "gathering utxos..."
-    putStrLn $ show $ length utxos
-    let tx = either undefined id $ makePairRequest utxos prvkey nonces tao (encodeUtf8 adFinder)
+    let tx = either undefined id $ makePairRequest [utxo] prvkey nonces tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Pair request published!"
     return tx

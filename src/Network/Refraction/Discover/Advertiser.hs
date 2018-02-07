@@ -9,10 +9,12 @@ import Control.Monad.CryptoRandom (crandomRs)
 import Crypto.Random.DRBG (CtrDRBG, newGenIO)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import Data.List (find)
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
-import Network.Haskoin.Transaction (Tx)
+import Network.Haskoin.Script (ScriptOp(..), scriptOps)
+import Network.Haskoin.Transaction (scriptOutput, Tx)
 
 import Network.Refraction.BitcoinUtils
 import Network.Refraction.Blockchain (broadcastTx, fetchUTXOs)
@@ -20,25 +22,36 @@ import Network.Refraction.Discover.Types
 import Network.Refraction.Generator (makeAdTransaction, makePairRequest)
 import Network.Refraction.PeerToPeer (Msg)
 
-runAdvertiser :: Chan Msg -> PrvKey -> Location -> IO (Location, Tx)
-runAdvertiser chan prvkey loc = do
+-- TODO(hudon): don't use this...
+fromEither = either undefined id
+-- TODO(hudon): avoid partial functions https://wiki.haskell.org/Avoiding_partial_functions
+
+runAdvertiser :: Chan Msg -> PrvKey -> UTXO -> Location -> IO (Location, Tx)
+runAdvertiser chan prvkey utxo loc = do
     putStrLn "Running advertiser..."
     g <- newGenIO :: IO CtrDRBG
     let aNonce = head $ crandomRs (minBound, maxBound) g :: Nonce
-    publishAd prvkey loc aNonce
+    adTx <- publishAd prvkey utxo loc aNonce
     (rNonce, rLoc) <- selectRespondent chan
-    tx <- publishPairResponse prvkey (aNonce, rNonce)
+    tx <- publishPairResponse prvkey (getChangeUTXO adTx) (aNonce, rNonce)
     return (rLoc, tx)
+  where
+    getChangeUTXO tx = case find isNotOPRETURN (getUTXOs tx) of
+      -- TODO(hudon): handle error
+      Nothing -> undefined
+      Just utxo -> utxo
+    isNotOPRETURN = isNotOPRETURN' . scriptOps . fromEither . S.decode . scriptOutput . _txOut
+    isNotOPRETURN' (OP_RETURN:_) = False
+    isNotOPRETURN' _ = True
 
-publishAd :: PrvKey -> Location -> Nonce -> IO ()
-publishAd prvkey loc nonce = do
+publishAd :: PrvKey -> UTXO -> Location -> Nonce -> IO Tx
+publishAd prvkey utxo loc nonce = do
     putStrLn "Publish ad..."
-    let addr = pubKeyAddr $ derivePubKey prvkey
-        uniqueLoc = B8.take onionLengthWithoutTLD loc
-    utxos <- fetchUTXOs addr
-    let tx = either undefined id $ makeAdTransaction utxos prvkey uniqueLoc nonce tao (encodeUtf8 adFinder)
+    let uniqueLoc = B8.take onionLengthWithoutTLD loc
+        tx = either undefined id $ makeAdTransaction [utxo] prvkey uniqueLoc nonce tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Ad published!"
+    return tx
 
 selectRespondent :: Chan Msg -> IO (Nonce, Location)
 selectRespondent chan = do
@@ -56,9 +69,10 @@ selectRespondent chan = do
         let (rNonce, rLoc) = B.splitAt 8 msg -- TODO: don't assume Word64 Nonce, use better schema
         return (either undefined id $ S.decode rNonce, either undefined id $ S.decode rLoc)
 
-publishPairResponse :: PrvKey -> (Nonce, Nonce) -> IO Tx
-publishPairResponse prvkey nonces = do
+publishPairResponse :: PrvKey -> UTXO -> (Nonce, Nonce) -> IO Tx
+publishPairResponse prvkey utxo nonces = do
     putStrLn "Publishing pair response"
+    -- TODO(hudon): this should be using the UTXO from the ad
     let addr = pubKeyAddr $ derivePubKey prvkey
     utxos <- fetchUTXOs addr
     putStrLn "gathering utxos..."
