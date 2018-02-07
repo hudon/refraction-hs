@@ -33,15 +33,18 @@ serverLoop sock chan = do
     forkIO $ runConn conn chan
     serverLoop sock chan
 
-startServer :: PortNumber -> IO (Chan Msg)
-startServer port = do
+-- | Forks a server and returns a channel. The server accepts incoming connections and
+--   forwards any incoming messages to the channel.
+startServer :: IO (Chan Msg, PortNumber)
+startServer = do
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet port iNADDR_ANY)
+    bind sock (SockAddrInet aNY_PORT iNADDR_ANY)
     listen sock 2
     chan <- newChan
     forkIO $ serverLoop sock chan
-    return chan
+    chosenPort <- socketPort sock
+    return (chan, chosenPort)
 
 sendMessage :: Msg -> Socket -> IO ()
 sendMessage m sock = do

@@ -26,6 +26,7 @@ makeHiddenService :: PortNumber -> (ByteString -> IO ()) -> IO ()
 makeHiddenService privatePort f = do
     torPort <- whichControlPort
     Tor.withSession torPort $ \controlSock -> do
+        -- Port 80 is "virtual port" and not an actual port on the host
         onion <- Tor.mapOnion controlSock 80 (toInteger privatePort) False Nothing
         f . encodeUtf8 $ append (toText onion) ".onion"
 

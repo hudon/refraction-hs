@@ -3,7 +3,6 @@ module Network.Refraction.RoundManager
     ( prepareRounds
     ) where
 
-import Network (PortNumber)
 import qualified Network.Haskoin.Crypto as HC
 import qualified Network.Haskoin.Transaction as HT
 
@@ -25,8 +24,7 @@ startRound isBob isAlice addr refundAddr prv utxo = do
     -- TODO(hudon): make the rounds not fetch all UTXOS but only the split output assigned
     --              to the round
     putStrLn "Round started."
-    let port = if isBob then 4142 else 4143 :: PortNumber
-    chan <- P2P.startServer port
+    (chan, port) <- P2P.startServer
     putStrLn "Making hidden service..."
     makeHiddenService port $ \myLocation -> do
         putStrLn $ "hidden service location: " ++ show myLocation
