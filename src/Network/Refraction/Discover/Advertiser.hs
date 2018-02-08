@@ -13,7 +13,7 @@ import Data.List (find)
 import Data.Serialize as S
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import Network.Haskoin.Crypto (derivePubKey, PrvKey, pubKeyAddr)
-import Network.Haskoin.Script (ScriptOp(..), scriptOps)
+import Network.Haskoin.Script (decodeOutputBS, isDataCarrier)
 import Network.Haskoin.Transaction (scriptOutput, Tx)
 
 import Network.Refraction.BitcoinUtils
@@ -40,9 +40,7 @@ runAdvertiser chan prvkey utxo loc = do
       -- TODO(hudon): handle error
       Nothing -> undefined
       Just utxo -> utxo
-    isNotOPRETURN = isNotOPRETURN' . scriptOps . fromEither . S.decode . scriptOutput . _txOut
-    isNotOPRETURN' (OP_RETURN:_) = False
-    isNotOPRETURN' _ = True
+    isNotOPRETURN = not . isDataCarrier . fromEither . decodeOutputBS . scriptOutput . _txOut
 
 publishAd :: PrvKey -> UTXO -> Location -> Nonce -> IO Tx
 publishAd prvkey utxo loc nonce = do
@@ -72,13 +70,8 @@ selectRespondent chan = do
 publishPairResponse :: PrvKey -> UTXO -> (Nonce, Nonce) -> IO Tx
 publishPairResponse prvkey utxo nonces = do
     putStrLn "Publishing pair response"
-    -- TODO(hudon): this should be using the UTXO from the ad
-    let addr = pubKeyAddr $ derivePubKey prvkey
-    utxos <- fetchUTXOs addr
-    putStrLn "gathering utxos..."
-    putStrLn $ show $ length utxos
     -- TODO use a separate generator that hashes the respondent nonce
-    let tx = either undefined id $ makePairRequest utxos prvkey nonces tao (encodeUtf8 adFinder)
+    let tx = either undefined id $ makePairRequest [utxo] prvkey nonces tao (encodeUtf8 adFinder)
     broadcastTx tx
     putStrLn "Pair response published!"
     return tx

@@ -38,8 +38,8 @@ resolver: lts-10.3
 packages:
 - '.'
 - location:
-    git: https://github.com/haskoin/haskoin.git
-    commit: 0caafdb5a5696338ff79467e5f95a5dd29ac7482
+    git: https://github.com/hudon/haskoin.git
+    commit: 1fa83f742e5f4d6e361a13c8bc5de1f38cb0926e
   subdirs:
   - haskoin-core
   extra-dep: true

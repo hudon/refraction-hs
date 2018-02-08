@@ -29,5 +29,5 @@ discover chan myLoc isBob isAlice prv utxo = flipCoin >>= pickRole
       | isAlice = runRespondent prv utxo myLoc -- TODO: for debug purposes, to be removed
       | heads = runAdvertiser chan prv utxo myLoc
       | otherwise = runRespondent prv utxo myLoc
-    -- TODO use crypto-api everywhere
+    -- TODO use crypto-api everywhere for security
     flipCoin = getStdRandom (randomR ((1 :: Int), 100)) >>= return . (> 50)

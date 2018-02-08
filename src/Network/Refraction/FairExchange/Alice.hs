@@ -89,7 +89,7 @@ aliceCommit chan (prv, pub) bPub sumHashes lastTx theirLocation = do
     print bCommitHash
     bCommit <- liftM (fromMaybe undefined) $ fetchTx bCommitHash
     -- TODO(hudon) wait for bob commit confirmations
-    --
+    -- NOTE: assumes the first output is the ad message op_return so naively selects the second
     let (_:utxo:_) = getUTXOs lastTx
         -- TODO(hudon) clean up these fromEither/fromMaybe
         bsToHash256 bs = either (const Nothing) Just (S.decode bs)
