@@ -32,6 +32,7 @@ startRound isBob isAlice addr refundAddr prv utxo = do
         (theirLocation, lastTx) <- discover chan myLocation isBob isAlice prv utxo
         putStrLn "discover done!"
         fairExchange isBob isAlice prv chan lastTx myLocation theirLocation
+    return ()
 
 --SEE XIM PAPER:
 --m: number of parallel rounds, determined by how much money Alice has

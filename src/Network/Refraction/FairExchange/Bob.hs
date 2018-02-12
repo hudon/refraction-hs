@@ -108,6 +108,6 @@ verifyRedeem :: a -> Bool
 verifyRedeem = const True
 
 send :: Location -> Msg -> IO ()
-send loc x = secureConnect loc $ sendMessage x
+send loc x = secureConnect loc (sendMessage x) >> return ()
 
 printErr x = traceShow x undefined

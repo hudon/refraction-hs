@@ -12,6 +12,7 @@ import Data.Text (Text)
 import qualified Data.Text.IO as T
 import qualified Network.Refraction as R
 import qualified Network.Refraction.BitcoinUtils as BU
+import qualified Network.Refraction.Tor as BT
 
 configFilename = ".refraction.yaml"
 
@@ -55,13 +56,22 @@ touchConfig = doesFileExist configFilename >>= writeIfFalse
   where writeIfFalse False = writeFile configFilename "bitcoin:\n  network: testnet3\n  insightURL: https://testnet.blockexplorer.com"
         writeIfFalse _ = return ()
 
+untilM :: Monad m => m Bool -> m a -> m ()
+untilM p a = do
+  done <- p
+  if done
+    then return ()
+    else a >> untilM p a
+
 runRefraction :: Bool -> Bool -> Bool -> IO ()
 runRefraction isBob isAlice ignoreValidation = do
     touchConfig
     config <- readConfig
-    T.putStr "Please start Tor. Is Tor running? (y/n): "
-    hFlush stdout
-    _ <- T.getLine
+    --T.putStr "Please start Tor. Is Tor running? (y/n): "
+    --hFlush stdout
+    --_ <- T.getLine
+    let askForTor = T.putStr "Tor daemon not found. Start Tor and press enter to try again..." >> hFlush stdout >> T.getLine
+    untilM BT.isTorUp askForTor
 
     T.putStr "Enter source private key (WIF encoded): "
     hFlush stdout
