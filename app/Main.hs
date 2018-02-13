@@ -21,7 +21,6 @@ data Flag
   | Help
   deriving Eq
 
--- TODO(hudon): make an interactive UI on top of this app in case users don't want to pass everything by arguments
 optionDescs :: [OptDescr Flag]
 optionDescs = [
     Option ['b'] ["isbob"]   (NoArg IsBob)   "run in debug mode -- bob/advertiser",
