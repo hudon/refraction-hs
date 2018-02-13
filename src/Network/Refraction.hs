@@ -7,9 +7,9 @@ module Network.Refraction
     ) where
 
 import Control.Monad (when)
+import qualified Data.ByteString as B
 import Data.Maybe
-import Data.Text (Text, append)
-import qualified Data.Text.IO as TI
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Yaml
 import Network.Haskoin.Constants (setTestnet)
@@ -22,7 +22,7 @@ import Network.Refraction.RoundManager (prepareRounds)
 -- There may be a simpler way to express this, but this is our config file type declaration
 data RefractionConfig = RefractionConfig { bitcoin :: BitcoinConfig } deriving Show
 
-data BitcoinConfig = BitcoinConfig { network :: Text, insightURL :: Text } deriving Show
+data BitcoinConfig = BitcoinConfig { network :: String, insightURL :: String } deriving Show
 
 instance FromJSON RefractionConfig where
     parseJSON (Object m) = RefractionConfig <$> m .: "bitcoin"
@@ -34,37 +34,39 @@ instance FromJSON BitcoinConfig where
                            m .: "insightURL"
     parseJSON x = fail ("not an object: " ++ show x)
 
-isValidPrivateKey :: Text -> Bool
+encodeUtf8 :: String -> B.ByteString
+encodeUtf8 = TE.encodeUtf8 . T.pack
+
+isValidPrivateKey :: String -> Bool
 isValidPrivateKey prv =
-    case C.fromWif (TE.encodeUtf8 prv) of
+    case C.fromWif (encodeUtf8 prv) of
         Nothing -> False
         Just _ -> True
 
-handleBadPrvkey :: Text -> IO ()
+handleBadPrvkey :: String -> IO ()
 handleBadPrvkey prv = putStrLn "ERROR: private key is not valid"
 
-isValidAddress :: Text -> Bool
-isValidAddress addr = case C.base58ToAddr (TE.encodeUtf8 addr) of
+isValidAddress :: String -> Bool
+isValidAddress addr = case C.base58ToAddr (encodeUtf8 addr) of
     Nothing -> False
     Just _ -> True
 
-handleBadAddress :: Text -> IO()
+handleBadAddress :: String -> IO()
 handleBadAddress addr = putStrLn "ERROR: address is not valid"
 
-refract :: RefractionConfig -> Bool -> Bool -> Bool -> Text -> Text -> Text -> IO ()
-refract config isBob isAlice ignoreValidation prv endAddr refundAddr = do
+refract :: RefractionConfig -> Bool -> Bool -> String -> String -> String -> IO ()
+refract config isBob isAlice prv endAddr refundAddr = do
     let btcNetwork = network . bitcoin $ config
-    TI.putStrLn $ append "INFO: Starting refraction on " btcNetwork
+    putStrLn $ "INFO: Starting refraction on " ++ btcNetwork
     when (btcNetwork == "testnet3") setTestnet
     case () of
-      _ | not (ignoreValidation || isValidPrivateKey prv) -> handleBadPrvkey prv
-        | not (ignoreValidation || isValidAddress endAddr) -> handleBadAddress endAddr
-      -- | not (ignoreValidation || isValidAddress startAddr) -> handleBadAddress startAddr
-        | not (ignoreValidation || isValidAddress refundAddr) -> handleBadAddress refundAddr
+      _ | not (isValidPrivateKey prv) -> handleBadPrvkey prv
+        | not (isValidAddress endAddr) -> handleBadAddress endAddr
+        | not (isValidAddress refundAddr) -> handleBadAddress refundAddr
         | otherwise -> prepareRounds isBob isAlice p e r
   where
     --s = deserialize startAddr -- not used. we'll use the private key for now
     e = deserialize endAddr
     r = deserialize refundAddr
-    p = fromMaybe undefined . C.fromWif $ TE.encodeUtf8 prv
-    deserialize = fromMaybe undefined . C.base58ToAddr . TE.encodeUtf8
+    p = fromMaybe undefined . C.fromWif $ encodeUtf8 prv
+    deserialize = fromMaybe undefined . C.base58ToAddr . encodeUtf8

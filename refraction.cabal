@@ -59,10 +59,10 @@ executable refraction-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , bytestring
-                     , refraction
-                     , yaml
-                     , text
                      , directory
+                     , refraction
+                     , text
+                     , yaml
   default-language:    Haskell2010
 
 test-suite refraction-test
