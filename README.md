@@ -11,4 +11,4 @@ Refraction is an implementation of the Xim protocol explained in [0] which depen
 
 [0] http://forensics.umass.edu/pubs/bissias.wpes.2014.pdf (xim)
 
-[1] http://elaineshi.com/docs/bitcoin.pdf (section 7 is the relevant part -- FairExchange)
+[1] http://elaineshi.com/docs/bitcoin.pdf (section 7 -- FairExchange)
